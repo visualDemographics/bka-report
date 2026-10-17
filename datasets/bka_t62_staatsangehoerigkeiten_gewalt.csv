@@ -1,0 +1,197 @@
+rang,staatsangehoerigkeit,tatverdaechtige_gewalt_892000,anteil_an_nichtdeutschen_pct
+1,Syrien,11316,14.31
+2,Türkei,6880,8.7
+3,Rumänien,5262,6.65
+4,Afghanistan,5219,6.6
+5,Polen,4401,5.56
+6,Irak,3569,4.51
+7,Bulgarien,3228,4.08
+8,Ukraine,3056,3.86
+9,Serbien,2271,2.87
+10,Marokko,1874,2.37
+11,Algerien,1729,2.19
+12,Ungeklärt,1673,2.12
+13,Italien,1663,2.1
+14,Kosovo,1566,1.98
+15,Tunesien,1368,1.73
+16,Russische Föderation,1362,1.72
+17,Iran,1264,1.6
+18,Somalia,1002,1.27
+19,Georgien,956,1.21
+20,Kroatien,955,1.21
+21,Griechenland,909,1.15
+22,Eritrea,882,1.12
+23,Bosnien und Herzegowina,866,1.09
+24,Nordmazedonien,857,1.08
+25,Albanien,842,1.06
+26,Nigeria,802,1.01
+27,Libanon,683,0.86
+28,Guinea,595,0.75
+29,Spanien,545,0.69
+30,Moldau,526,0.67
+31,Libyen,462,0.58
+32,Pakistan,452,0.57
+33,Gambia,436,0.55
+34,Ungarn,420,0.53
+35,Slowakei,415,0.52
+36,Indien,384,0.49
+37,Niederlande,369,0.47
+38,Portugal,349,0.44
+39,Ägypten,346,0.44
+40,Litauen,344,0.43
+41,Tschechische Republik,320,0.4
+42,Frankreich,304,0.38
+43,Staatenlos,299,0.38
+44,Lettland,297,0.38
+45,Vietnam,245,0.31
+46,Aserbaidschan,238,0.3
+47,Ghana,232,0.29
+48,Österreich,228,0.29
+49,Montenegro,213,0.27
+50,USA,212,0.27
+51,Armenien,209,0.26
+52,Sudan (ohne Südsudan),205,0.26
+53,Kasachstan,183,0.23
+54,Großbritannien/Nordirland,165,0.21
+55,Kamerun,161,0.2
+56,Brasilien,152,0.19
+57,Äthiopien,150,0.19
+58,China,129,0.16
+59,Weißrussland (Belarus),121,0.15
+60,Jordanien,104,0.13
+61,Kolumbien,102,0.13
+62,Cote d'Ivoire,97,0.12
+63,Jemen,92,0.12
+64,Kenia,91,0.12
+65,Thailand,86,0.11
+66,Sierra Leone,85,0.11
+67,Sri Lanka,85,0.11
+68,Ohne Angabe,85,0.11
+69,Togo,83,0.1
+70,Senegal,82,0.1
+71,Schweiz,81,0.1
+72,Slowenien,81,0.1
+73,Mali,77,0.1
+74,Belgien,75,0.09
+75,Dominikanische Republik,72,0.09
+76,Guinea-Bissau,69,0.09
+77,Tadschikistan,68,0.09
+78,"Kongo, Demokratische Republik",65,0.08
+79,Schweden,64,0.08
+80,Venezuela,59,0.07
+81,Angola,54,0.07
+82,Kuba,52,0.07
+83,Irland,49,0.06
+84,Bangladesch,48,0.06
+85,"Kongo, Republik",46,0.06
+86,Israel,43,0.05
+87,Luxemburg,39,0.05
+88,Dänemark,36,0.05
+89,Philippinen,33,0.04
+90,Peru,32,0.04
+91,Liberia,30,0.04
+92,Mexiko,28,0.04
+93,Jamaika,28,0.04
+94,Ecuador,28,0.04
+95,Kirgisistan,27,0.03
+96,Chile,26,0.03
+97,Benin,26,0.03
+98,Niger,26,0.03
+99,Usbekistan,25,0.03
+100,Estland,24,0.03
+101,Kanada,24,0.03
+102,Mongolei,24,0.03
+103,Tschad,23,0.03
+104,Burkina Faso,22,0.03
+105,Turkmenistan,22,0.03
+106,Uganda,20,0.03
+107,Norwegen,20,0.03
+108,"Korea, Republik",18,0.02
+109,Nicaragua,18,0.02
+110,Südsudan,17,0.02
+111,Australien,17,0.02
+112,Argentinien,16,0.02
+113,Finnland,14,0.02
+114,Südafrika,14,0.02
+115,Nepal,13,0.02
+116,Ruanda,13,0.02
+117,Simbabwe,13,0.02
+118,Saudi-Arabien,12,0.02
+119,Burundi,12,0.02
+120,Tansania,12,0.02
+121,Indonesien,11,0.01
+122,Mosambik,11,0.01
+123,Kuwait,11,0.01
+124,Dominica,11,0.01
+125,Namibia,10,0.01
+126,Honduras,9,0.01
+127,Gabun,7,0.01
+128,Madagaskar,7,0.01
+129,Vereinigte Arabische Emirate,6,0.01
+130,Myanmar,6,0.01
+131,Haiti,5,0.01
+132,Mauretanien,5,0.01
+133,Malaysia,5,0.01
+134,Sambia,5,0.01
+135,Bahrain,5,0.01
+136,"Korea, Volksrepublik",4,0.01
+137,Zentralafrikanische Republik,4,0.01
+138,Paraguay,4,0.01
+139,Bolivien,4,0.01
+140,Taiwan,4,0.01
+141,Neuseeland,4,0.01
+142,El Salvador,4,0.01
+143,Fidschi,3,0.0
+144,Kap Verde,2,0.0
+145,Botsuana,2,0.0
+146,Guatemala,2,0.0
+147,Island,2,0.0
+148,Japan,2,0.0
+149,Kambodscha,2,0.0
+150,Äquatorialguinea,2,0.0
+151,Malawi,2,0.0
+152,Mauritius,2,0.0
+153,Laos,2,0.0
+154,Seychellen,1,0.0
+155,Liechtenstein,1,0.0
+156,Trinidad und Tobago,1,0.0
+157,Uruguay,1,0.0
+158,Panama,1,0.0
+159,Grenada,1,0.0
+160,Malta,1,0.0
+161,Guyana,1,0.0
+162,Suriname,1,0.0
+163,Sao Tome und Principe,1,0.0
+164,Samoa,1,0.0
+165,Katar,1,0.0
+166,Singapur,1,0.0
+167,Zypern,1,0.0
+168,Andorra,1,0.0
+169,Vanuatu,0,0.0
+170,Niue,0,0.0
+171,Bhutan,0,0.0
+172,Brunei,0,0.0
+173,Marshallinseln,0,0.0
+174,Malediven,0,0.0
+175,Barbados,0,0.0
+176,Belize,0,0.0
+177,Costa Rica,0,0.0
+178,Cookinseln,0,0.0
+179,Bahamas,0,0.0
+180,Palau,0,0.0
+181,Oman,0,0.0
+182,Dschibuti,0,0.0
+183,Tonga,0,0.0
+184,Antigua und Barbuda,0,0.0
+185,Timor-Leste,0,0.0
+186,Papua-Neuguinea,0,0.0
+187,Lesotho,0,0.0
+188,Swasiland,0,0.0
+189,Salomonen,0,0.0
+190,St. Vincent,0,0.0
+191,St. Lucia,0,0.0
+192,St. Kitts und Nevis,0,0.0
+193,Komoren,0,0.0
+194,Kiribati,0,0.0
+195,Mikronesien,0,0.0
+196,Monaco,0,0.0

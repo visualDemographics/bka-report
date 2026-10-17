@@ -1,0 +1,11 @@
+altersgruppe,altersspanne_jahre,anteil_deutsche_pct,anteil_nichtdeutsche_pct,ueberhang_faktor_nichtdeutsche,kriminologische_relevanz,in_hochrisikofenster
+0 bis 13 Jahre,0–13,12.1,14.8,1.22,Strafunmündig; keine strafrechtliche Erfassung (TVBZ = 0),False
+14 bis 17 Jahre (Jugendliche),14–17,3.7,4.9,1.32,Starker Delinquenzanstieg (Jugendtypischer Reifungsprozess),True
+18 bis 20 Jahre (Heranwachsende),18–20,2.8,4.8,1.71,Absoluter empirischer Peak der Delinquenzkurve (Moffitt Maturity Gap),True
+21 bis 24 Jahre (Junge Erwachsene I),21–24,4.3,9.8,2.28,Hohe Delinquenzinzidenz (Zuwanderungspeak),True
+25 bis 29 Jahre (Junge Erwachsene II),25–29,5.5,11.7,2.13,Desistance-Phase setzt ein; starker Zuwandererüberhang,True
+14 bis 30 Jahre (Hochrisikofenster),14–30,16.3,31.2,1.91,Demografischer Haupt-Confounder: Zuwanderer doppelt so stark im Peak-Alter,True
+30 bis 39 Jahre,30–39,12.6,21.3,1.69,Erwachsenendelinquenz (überwiegend prekaritätsbedingt),False
+40 bis 49 Jahre,40–49,12.1,12.3,1.02,Moderates Delinquenzrisiko,False
+50 bis 64 Jahre,50–64,24.9,14.3,0.57,Geringes Gewaltrisiko; Baby-Boomer-Kohorte bei Deutschen,False
+65 Jahre und älter,65+,24.3,6.1,0.25,Minimales Gewaltrisiko (TVBZ < 40),False

@@ -1,0 +1,7 @@
+straftat_schluessel,straftat_bezeichnung,sexus,tatverdaechtige_gesamt,nichtdeutsche_tv_anzahl,nichtdeutsche_anteil_pct,kein_aufenthalt_in_de_anzahl,unerlaubter_aufenthalt_anzahl,unerlaubter_aufenthalt_pct,erlaubter_aufenthalt_anzahl,erlaubter_aufenthalt_pct,anlass_asylbewerber_anzahl,anlass_asylbewerber_pct,anlass_schutz_asylberechtigt_fluechtling_anzahl,anlass_schutz_asylberechtigt_fluechtling_pct,anlass_duldung_anzahl,anlass_duldung_pct,anlass_sonstiger_erlaubter_aufenthalt_anzahl,anlass_sonstiger_erlaubter_aufenthalt_pct
+------,Straftaten insgesamt,M,1675541,720666,43.0,650,184716,25.63,535300,74.28,71619,9.94,34762,4.82,27894,3.87,401025,55.65
+------,Straftaten insgesamt,W,571226,202603,35.5,147,52111,25.72,150345,74.21,14838,7.32,11716,5.78,4858,2.4,118933,58.7
+------,Straftaten insgesamt,X,2246767,923269,41.1,797,236827,25.65,685645,74.26,86457,9.36,46478,5.03,32752,3.55,519958,56.32
+892000,Gewaltkriminalität,M,159539,68755,43.1,44,1723,2.51,66988,97.43,10901,15.85,6041,8.79,4741,6.9,45305,65.89
+892000,Gewaltkriminalität,W,31066,10333,33.3,3,81,0.78,10249,99.19,948,9.17,903,8.74,394,3.81,8004,77.46
+892000,Gewaltkriminalität,X,190605,79088,41.5,47,1804,2.28,77237,97.66,11849,14.98,6944,8.78,5135,6.49,53309,67.4

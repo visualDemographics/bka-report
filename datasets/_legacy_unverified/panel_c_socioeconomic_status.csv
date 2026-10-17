@@ -1,0 +1,8 @@
+indikator_bezeichnung,deutscher_wert,nichtdeutscher_wert,disparitaet_ratio,einheit,primaerquelle,kriminologische_wirkung
+Armutsgefährdungsquote (<60% Median-Äquivalenzeinkommen),12.2,35.4,2.9,% der Wohnbevölkerung,Destatis Pressemitteilung #419/23 (Mikrozensus EU-SILC 2023),Mangelnde materielle Ressourcen erhoehen innerfamiliaeren Stress und Delinquenz
+SGB II / Bürgergeld-Hilfequote (Grundsicherung für Arbeitsuchende),5.3,16.2,3.06,% der erwerbsfähigen Bevölkerung,Bundesagentur für Arbeit (BA Migrationsmonitor 2023),Direkter staatlicher Armutsnachweis; Wegfall formeller Arbeitsplatzkontrolle
+"Niedriglohnquote (<13,04 Euro Bruttostundenlohn)",13.8,27.6,2.0,% der Beschäftigten,Destatis Verdienststrukturerhebung 2023,Präkäre Beschäftigungsverhältnisse reduzieren soziale Teilhabe
+"SES-Modalwert auf standardisierter Skala [0=Armut, 100=Wohlstand]",56.0,28.0,0.5,Perzentilwert (Modus),Mikrozensus EU-SILC / SOEP v38 Kalibrierung,Massive Linksschiefe der soziookonomischen Lebenslagen bei Nichtdeutschen
+Bevölkerungsanteil in akuter Prekarität (SES < 40),18.2,59.5,3.27,% der Gesamtgruppe,Synthese Destatis / SOEP Panel,Dreifache Konzentration in der kriminologischen Hochrisikozone
+Bevölkerungsanteil in gesicherter Mittelschicht (SES 40-80),62.4,34.1,0.55,% der Gesamtgruppe,Synthese Destatis / SOEP Panel,"Starke informelle soziale Kontrolle (Arbeit, stabile Wohnverhältnisse)"
+Bevölkerungsanteil in gehobenem Wohlstand (SES > 80),19.4,6.4,0.33,% der Gesamtgruppe,Synthese Destatis / SOEP Panel,Nahezu vollstaendige Kriminalitaetsabwesenheit bei Gewaltkriminalitaet

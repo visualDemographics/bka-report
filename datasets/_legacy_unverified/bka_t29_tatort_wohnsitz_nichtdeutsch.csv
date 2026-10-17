@@ -1,0 +1,7 @@
+straftat_schluessel,straftat_bezeichnung,sexus,nichtdeutsche_tv_gesamt,wohnsitz_tatortgemeinde_anzahl,wohnsitz_tatortgemeinde_pct,wohnsitz_landkreis_anzahl,wohnsitz_landkreis_pct,wohnsitz_bundesland_anzahl,wohnsitz_bundesland_pct,wohnsitz_uebriges_bundesgebiet_anzahl,wohnsitz_uebriges_bundesgebiet_pct,wohnsitz_im_ausland_anzahl,wohnsitz_im_ausland_pct,ohne_festen_unbek_wohnsitz_anzahl,ohne_festen_unbek_wohnsitz_pct,ohne_festen_wohnsitz_anzahl,ohne_festen_wohnsitz_pct,unbekannter_wohnsitz_anzahl,unbekannter_wohnsitz_pct,summe_nicht_residenten_anzahl,summe_nicht_residenten_pct
+------,Straftaten insgesamt,M,720666,287050,39.8,50507,7.0,144014,20.0,65253,9.1,142207,19.7,144754,20.1,97138,13.5,58519,8.1,286961,39.82
+------,Straftaten insgesamt,W,202603,90979,44.9,12652,6.2,36255,17.9,13664,6.7,38086,18.8,26020,12.8,16146,8.0,10695,5.3,64106,31.64
+------,Straftaten insgesamt,X,923269,378029,40.9,63159,6.8,180269,19.5,78917,8.5,180293,19.5,170774,18.5,113284,12.3,69214,7.5,351067,38.02
+892000,Gewaltkriminalität,M,68755,39228,57.1,5416,7.9,14792,21.5,3438,5.0,2021,2.9,7522,10.9,5623,8.2,2146,3.1,9543,13.88
+892000,Gewaltkriminalität,W,10333,6919,67.0,577,5.6,1916,18.5,299,2.9,273,2.6,543,5.3,405,3.9,148,1.4,816,7.9
+892000,Gewaltkriminalität,X,79088,46147,58.3,5993,7.6,16708,21.1,3737,4.7,2294,2.9,8065,10.2,6028,7.6,2294,2.9,10359,13.1

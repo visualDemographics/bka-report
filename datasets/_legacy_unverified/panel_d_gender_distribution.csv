@@ -1,0 +1,4 @@
+gruppe,tv_maennlich_anzahl,tv_maennlich_anteil_pct,tv_weiblich_anzahl,tv_weiblich_anteil_pct,tv_gesamt_anzahl,bevoelkerung_maennlich_anteil_pct,primaerquelle
+Deutsche,90784,81.41,20733,18.59,111517,49.3,BKA PKS 2023 Tabelle 40 (BU-TV-12-T40) Key 892000
+Nichtdeutsche,68755,86.93,10333,13.07,79088,53.4,BKA PKS 2023 Tabelle 50 (BU-TV-17-T50) Key 892000
+Gesamt,159539,83.7,31066,16.3,190605,49.95,BKA PKS 2023 Tabelle 20 (BU-TV-01-T20) Key 892000

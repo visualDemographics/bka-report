@@ -1,0 +1,10 @@
+alter_jahre,kohorten_label,pks_deutsche_maenner_t40,pks_nichtdeutsche_maenner_roh_t50,pks_nichtdeutsche_maenner_kontrolliert,modellkurve_deutsche_fit,modellkurve_nichtdeutsche_fit,rohdisparitaet_ratio,kontrollierte_disparitaet_ratio
+15,14–16 J.,680,2650,720,1291.2,1383.5,3.9,1.059
+17,16–18 J.,1150,3820,1220,1516.6,1625.0,3.32,1.061
+19,18–20 J.,1580,5150,1640,1599.2,1713.4,3.26,1.038
+23,22–24 J.,1290,3950,1340,1282.9,1374.5,3.06,1.039
+27,26–28 J.,820,2720,860,668.5,716.3,3.32,1.049
+35,34–36 J.,410,1480,430,63.1,67.6,3.61,1.049
+45,44–46 J.,240,860,250,13.3,14.2,3.58,1.042
+55,54–56 J.,110,440,115,9.4,10.1,4.0,1.045
+65,64–66 J.,35,130,38,6.7,7.2,3.71,1.086

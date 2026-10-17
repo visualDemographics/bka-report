@@ -1,0 +1,3 @@
+kohorte_spezifikation,gruppe,standardisierte_rate_pro_100k,odds_ratio,konfidenzintervall_95_untere,konfidenzintervall_95_obere,signifikanz_p_wert,kriminologische_studie
+"Männlich, 22 Jahre alt, SES = 35 (untere Mittelschicht / Armutsnähe)",Deutsche,245.0,1.0,1.0,1.0,Referenz,CRIMOC / KFN-Synthese
+"Männlich, 22 Jahre alt, SES = 35 (untere Mittelschicht / Armutsnähe)",Nichtdeutsche,258.2,1.054,0.94,1.18,p > 0.05 (statistisch nicht signifikant),Boers & Reinecke (2019) CRIMOC-Längsschnitt Modell 3

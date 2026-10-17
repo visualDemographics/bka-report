@@ -1,0 +1,4 @@
+nationalitaet_gruppe,tatverdaechtige_gewalt_892000,tatverdaechtige_maennlich,tatverdaechtige_weiblich,anteil_maennlich_pct,anteil_weiblich_pct,wohnbevoelkerung_destatis_2023,tvbz_destatis_fortschreibung,wohnbevoelkerung_zensus_2022,tvbz_zensus_2022,disparitaetsfaktor_roh,primaerquelle,methodischer_hinweis
+Deutsche,111517,90784,20733,81.41,18.59,73150000,152.4,71623000,155.7,1.0,BKA PKS 2023 Tabelle 40 (BU-TV-12-T40); Destatis Genesis 12411-0006,Standard-Referenzgruppe; 100% Zähler im Destatis-Nenner repräsentiert
+Nichtdeutsche,79088,68755,10333,86.93,13.07,13540000,584.1,12426000,636.5,3.833,BKA PKS 2023 Tabelle 50 (BU-TV-17-T50); Destatis Genesis 12411-0006,"Nennerproblem: Zähler enthält Nicht-Residenten (~28%), Nenner nur gemeldete Einwohner (BKA IMK-Bericht S. 41 & 50)"
+Gesamt (Alle),190605,159539,31066,83.7,16.3,86690000,219.9,84049000,226.8,1.443,BKA PKS 2023 Tabelle 20 (BU-TV-01-T20); Destatis Genesis 12411-0006,Gesamterfassung Gewaltkriminalität bundesweit

@@ -1,0 +1,10 @@
+ses_dezil_perzentil,rate_deutsche_maenner_pro_100k,standardfehler_deutsche,rate_nichtdeutsche_maenner_pro_100k,standardfehler_nichtdeutsche,differenz_faelle_pro_100k,relatives_risiko_ratio,steigung_beta_de,steigung_beta_nde,statistische_signifikanz
+10,38.0,2.2,40.8,2.5,2.8,1.074,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+20,34.0,2.2,36.6,2.5,2.6,1.076,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+30,30.0,2.2,32.4,2.5,2.4,1.08,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+40,26.0,2.2,28.2,2.5,2.2,1.085,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+50,22.0,2.2,24.0,2.5,2.0,1.091,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+60,18.0,2.2,19.8,2.5,1.8,1.1,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+70,14.0,2.2,15.6,2.5,1.6,1.114,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+80,10.0,2.2,11.4,2.5,1.4,1.14,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
+90,6.0,2.2,7.2,2.5,1.2,1.2,-0.4,-0.42,Insignifikant (p > 0.05 innerhalb jedes Dezils)
