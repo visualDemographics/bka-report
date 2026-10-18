@@ -49,16 +49,14 @@ A common flaw in crime disparity research is conflating exogenous confounders wi
 
 ### 4. The Joint-Risk Fallacy & Demographic Cohort Harmonization (Panel E)
 * Multiplying single marginal probabilities ($P(\text{Male}) \times P(\text{Age 14–30}) \times P(\text{SES} < 40)$) under the assumption of statistical independence is **methodologically invalid**, as age, biological sex, and poverty are inherently correlated in real populations.
-* Joint concentrations in this pipeline are calculated via the **conditional chain rule**:
-  $$P(\text{Risk} \mid g) = P(\text{Age 14–30} \mid g) \cdot P(\text{Male} \mid \text{Youth}, g) \cdot P(\text{Poverty} \mid \text{Youth, Male}, g)$$
+* Joint concentrations in this pipeline are calculated via the **conditional chain rule across the harmonized 14–30 window**:
+  $$P(\text{Risk} \mid g) = P(\text{Age 14–30} \mid g) \cdot P(\text{Male} \mid \text{Youth 14–30}, g) \cdot P(\text{Poverty} \mid \text{Youth 14–30, Male}, g)$$
   and safeguarded by **Fréchet–Hoeffding analytical bounds** as well as Plackett Copula sensitivity tests ($\text{OR} \in [0.8, 1.5]$).
 * **Cohort Harmonization & Analytical Bounds (Audit Safeguard for Panel E)**:
-  Because official statistical releases utilize varying cohort boundaries:
   - $P(\text{Youth} \mid g)$ from Census 2022 / Genesis 12411 covers the criminological young bracket **14–30 years** ($15.9\%$ German vs. $31.2\%$ non-German, $1.96\times$ youth overhang).
-  - $P(\text{Male} \mid \text{Youth}, g)$ from BKA BV-01/02 covers adolescents and young adults **14–21 years** ($51.3\%$ German vs. $53.9\%$ non-German).
-  - $P(\text{Poverty} \mid \text{Youth}, g)$ from Destatis EU-SILC Genesis 12211 covers young adults **18–24 years** ($22.1\%$ German vs. $48.6\%$ non-German, with male factor $k = 0.968$, yielding $21.4\%$ vs. $47.0\%$).
-  - *Cross-Bracket Conditioning Caveat*: Because official tables define youth brackets differently (14–30, 14–21, and 18–24), the conditional chain rule synthesizes these best-available official strata. Since 18–24 represents the peak poverty bracket within the 14–30 span, this provides an upper-envelope sensitivity proxy.
-  - The analytical **Fréchet–Hoeffding Copula Bounds** reported in Panel E reflect the full mathematical envelope under arbitrary dependency structures ($[0.0\%, 3.4\%]$ for Germans vs. $[0.3\%, 14.7\%]$ for non-Germans). The conditional chain rule point estimates (**$1.7\%$ vs. $7.9\%$**, disparity **$4.55\times$–$4.65\times$**) provide an audited, conservative benchmark reflecting joint risk concentration across the peak delinquency years.
+  - $P(\text{Male} \mid \text{Youth}, g)$ from Census 2022 & AZR 12521-04 covers the entire **14–30 years** bracket ($51.2\%$ German vs. $55.0\%$ non-German).
+  - $P(\text{Poverty} \mid \text{Youth}, g)$ from Destatis EU-SILC Genesis 12211 is population-weighted across the sub-cohorts spanning 14–30 (14–17 at 14.8%/36.2%, 18–24 at 22.1%/48.6%, and 25–29 at 11.5%/31.8%), yielding a weighted youth poverty rate of $16.9\%$ vs. $40.4\%$. Applying the male factor $k = 0.968$ yields $16.32\%$ vs. $39.05\%$.
+  - The analytical **Fréchet–Hoeffding Copula Bounds** reported in Panel E reflect the full mathematical envelope under arbitrary dependency structures ($[0.0\%, 2.6\%]$ for Germans vs. $[0.0\%, 12.2\%]$ for non-Germans). The conditional chain rule point estimates (**$1.3\%$ vs. $6.7\%$**, disparity **$5.04\times$**) provide an audited, mathematically harmonized benchmark reflecting joint risk concentration across the peak delinquency years. Plackett copula sensitivity ($\text{OR} \in [0.8, 1.5]$) demonstrates stability between $4.81\times$ and $5.21\times$.
 
 ---
 
@@ -68,19 +66,22 @@ A common flaw in crime disparity research is conflating exogenous confounders wi
 
 ---
 
-### 6. Two-Sample Bridging & Ecological Transportability (Registry $\to$ Microdata)
-Because the PKS records no individual socioeconomic data, adjusting for SES requires transferring empirical parameters from longitudinal microdata and self-report surveys (CRIMOC, KFN FB 144):
-1. **Target Population Divergence**: KFN FB 144 (survey of 9th-grade students, ages 14–16, $N = 20,407$) and CRIMOC (Duisburg/Münster longitudinal cohort, $N = 3,528$) track self-reported delinquency, whereas the PKS counts registered suspects across all ages. Transporting these findings assumes that the protective gradient of socioeconomic resources ($\beta \approx -0.41$) persists into young adulthood.
+### 6. Separation of Official Police Registers (Hellfeld) and Darkfield Surveys (Dunkelfeld)
+Because the PKS records no individual socioeconomic or darkfield data, scientific integrity requires maintaining a strict separation between register counts and survey findings:
+1. **Target Population Divergence**: KFN FB 107 (nationwide representative survey of 9th-grade students across 61 districts, ages 14–16, $N = 44,610$) tracks self-reported delinquency, whereas the PKS counts registered suspects across all ages (78.5% adults). Adolescent survey Odds Ratios are not extrapolated across adult men up to 80 years old as hard register deductions.
 2. **Construct Divergence (*Migration Background* vs. *Citizenship*)**: Academic surveys typically operationalize sociological *migration background* (including German-born 2nd and 3rd generations), whereas the PKS classifies strictly by *formal citizenship* at the time of the offense. Moreover, asylum seekers residing in collective reception centers are underrepresented in school-based surveys.
-3. **Classification**: Adjustments for socioeconomic factors must therefore be labeled as **econometric model estimates under literature assumptions**, rather than direct administrative registry counts.
-4. **Dual Stream Architecture (Stream A vs. Stream B)**:
-   - *Stream A (`plots/decomposition_waterfall.png`)*: Full national population decomposition for **males aged 14+**. Stages 1 to 3 apply administrative and demographic standardizations directly on BKA Table 20/40/50 and Destatis registries ($1203.4 \to 1036.4 \to 880.4$). Stage 4 (*Literature-Calibrated SES / Precarity Counterfactual*) applies the empirical attenuation factor ($0.342$) derived from criminological microdata (CRIMOC/KFN) to the residual gap, reaching $301.2$ vs. German baseline $285.8$ ($1.054\times$).
-   - *Stream B (`plots/panel_g_crimoc_waterfall.png`)*: Direct longitudinal panel cohort cascade for **adolescents and young adults aged 14–25** from CRIMOC (Boers & Reinecke 2019 Table 7.3 & p. 168), showing unadjusted M1 ($524.3$) $\to$ demographic M2 ($362.6$) $\to$ full social controls M3 ($258.2$) vs. German baseline $245.0$ ($1.054\times$, $95\%\text{ CI: } [0.94, 1.18]$, $p = 0.38$, n.s.).
-5. **Evaluated Linear Regression in Panel H**:
-   - The plotted points in Panel H represent evaluated predictions across net equivalence income deciles 10 to 90 based on the empirical regression models from KFN FB 144 and SOEP microdata ($\text{Rate} = 42.0 - 0.40 \cdot \text{SES}$ for Germans; $45.0 - 0.42 \cdot \text{SES}$ for non-Germans). They demonstrate that within any given income decile, the rate disparity is negligible (< 3 per 100k, $p > 0.05$), and that the aggregate gap is driven by differential decile exposure (61.5% vs. 23.3% in D1–D3).
-6. **Age-Crime Splines and Cohort Transitions in Panel I**:
-   - In raw BKA suspect registers, age brackets switch from narrow youth intervals (14–16, 16–18, 18–21) to 21–25 and broader multi-year intervals (25–30, 30–40, etc.). Non-German population denominators around age 25 transition from education/asylum registers to Central Register of Foreigners (AZR) records.
-   - To prevent artifacts, the fitted spline is evaluated strictly starting at age 14 (the statutory age of criminal responsibility in Germany, § 19 StGB), eliminating spurious boundary oscillations. The literature-controlled projection applies the adolescent CRIMOC attenuation factor ($0.4925$) to the youth peak, demonstrating that the adolescent delinquency surge flattens toward native baseline levels.
+3. **Register-Based Accounting in Panel G & Waterfall (`plots/decomposition_waterfall.png`)**:
+   - Evaluates the national population decomposition for **males aged 14+** across 3 empirical register stages:
+     - Stage 1: Raw PKS Suspect Rate: **1,203.4** per 100k ($4.34\times$ vs. German raw 277.5).
+     - Stage 2: Residence Adjustment (BKA T29 Tier 3: $-13.9\%$ non-residents / no fixed abode): **1,036.4** per 100k ($3.74\times$).
+     - Stage 3: Direct Age Standardization (Destatis Standard Population): **880.3** per 100k ($-156.1$, $3.08\times$ vs. German age-standardized baseline **285.8**).
+   - *Scientific Boundary*: Official police registers stop at $3.08\times$. BKA PKS does not record socioeconomic status or reporting behavior.
+4. **Empirical Living Conditions Decomposition in Panel H (KFN FB 107)**:
+   - Rather than relying on synthetic continuous income deciles, Panel H displays directly measured empirical violent delinquency prevalence across 3 progressive control conditions from KFN Research Report No. 107 (Baier et al. 2009, Figure 5.24, p. 86, $N = 44,610$).
+   - Demonstrates that under equalized living conditions (no state welfare receipt, attendance at standard schools rather than Förderschule, and absence of severe parental physical abuse), violent delinquency converges completely ($6.4\%$ German vs. $5.9\%$ Turkish and $5.7\%$ Ex-Yugoslav youth, pooled $\text{OR} = 0.909$ $[0.66; 1.26]$, $p = 0.56$ n.s.).
+5. **Universal Age-Crime Curves in Panel I (Ages 14–80)**:
+   - Evaluates the empirical BKA male curves across the entire life course (§ 19 StGB criminal responsibility starting at age 14): German baseline (T40 / BV-01), Raw Non-German (T50 / AZR), and Residence-Adjusted Non-German (T29 Tier 3: $-13.9\%$).
+   - Concludes the storyline using authentic administrative data without synthetic survey attenuation multipliers.
 
 ---
 

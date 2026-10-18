@@ -20,7 +20,7 @@ This project formulates four pre-registered, falsifiable hypotheses regarding BK
 
 ### Hypothesis 3 (Socioeconomic Status as a Causal Mediator)
 > **$H_3$**: Income poverty, labor market restrictions, and living in institutionalized precarity act primarily as **mediators** along the causal pathway between legal immigrant status and delinquency risk. Under equivalent socioeconomic conditions, the residual disparity decreases substantially toward parity.
-* **Operationalization**: Integration with multivariate longitudinal panel studies (CRIMOC, SOEP, KFN) that measure individual socioeconomic status (SES) at the person level.
+* **Operationalization**: Integration with representative darkfield surveys and longitudinal panels (KFN FB 107/109, SOEP, Boers & Reinecke) that measure individual socioeconomic status (SES) at the person level.
 * **Falsification Criterion**: If longitudinal panel studies demonstrate that the disparity remains substantially elevated after full controls for SES, school track, and family context (Odds Ratio $\text{OR} > 1.30, p < 0.05$), $H_3$ is refuted.
 
 ---

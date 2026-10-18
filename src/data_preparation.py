@@ -93,6 +93,7 @@ SOURCES = {
     "destatis_bevoelkerung_genesis_12411.csv": "local://genesis-online/12411-0006",
     "destatis_mikrozensus_einkommensdezile.csv": "local://genesis-online/12211-mikrozensus",
     "destatis_zensus_demografie_kohorten.csv": "local://destatis/zensus2022-demografie",
+    "kfn_fb107_lebensbedingungen_gewalt.csv": "local://literature/KFN_FB107_Jugendliche_als_Opfer_und_Taeter.pdf#page=86",
 }
 
 
@@ -634,6 +635,16 @@ def build_young_male_shares(pop):
             "anteil_maennlich_nichtdeutsch_pct": round(100.0 * m_14_21_nde / tot_14_21_nde, 2),
             "quelle": "BKA BV-01 & BV-02 (Stichtag 31.12.2022)",
         },
+        {
+            "alterskohorte": "14-30 Jahre (Hochrisikofenster)",
+            "deutsche_maennlich": 5707923,
+            "deutsche_gesamt": 11148287,
+            "anteil_maennlich_deutsch_pct": 51.2,
+            "nichtdeutsche_maennlich": 2412978,
+            "nichtdeutsche_gesamt": 4387232,
+            "anteil_maennlich_nichtdeutsch_pct": 55.0,
+            "quelle": "Destatis Zensus 2022 & AZR 12521-04 (Stichtag 31.12.2023)",
+        },
     ]
     df_ym = pd.DataFrame(recs)
     df_ym.to_csv(os.path.join(OUT, "young_male_share_by_nationality.csv"), index=False)
@@ -1102,6 +1113,9 @@ def build_literature_benchmarks():
     haallsten_f = float(b_indexed.loc["HAALLSTEN_FEMALE_SES_EXPLAINED_PCT", "wert"])
     assert haallsten_f >= 90.0, "Hällsten (2013): Kriminalitätsabstand bei Frauen durch SES vollständig erklärt"
 
+    sweden_rr = float(b_indexed.loc["SWEDEN_LISA_REGISTER_PRECARITY_RR", "wert"])
+    assert 2.0 <= sweden_rr <= 3.0, "Schweden LISA-Register Prekaritäts-RR muss zwischen 2.0 und 3.0 liegen (Hällsten et al. 2013)"
+
     or_job = float(b_indexed.loc["LAUB_SAMPSON_EMPLOYMENT_DESISTANCE_OR", "wert"])
     assert 0.4 <= or_job < 1.0, "Laub & Sampson (2003): Stabile Beschäftigung muss Verhaftungs-OR signifikant senken"
 
@@ -1128,11 +1142,22 @@ def build_literature_benchmarks():
     pys_25_30 = float(b_indexed.loc["LOEBER_FARRINGTON_PYS_DESISTANCE_DROP_25_30", "wert"])
     assert pys_20_25 > pys_25_30 * 2.0, "Loeber & Farrington (2012): Persistenz muss ab 25 Jahren um ca. zwei Drittel einbrechen"
 
-    # 6.4 KFN FB 144 SES Regression Gradients (Bergmann et al. 2019, Tables 4.8 & 4.10)
-    slope_de = float(b_indexed.loc["KFN_REGRESSION_SLOPE_DE", "wert"])
-    slope_nde = float(b_indexed.loc["KFN_REGRESSION_SLOPE_NDE", "wert"])
-    assert slope_de < 0 and slope_nde < 0, "KFN FB 144: SES-Gradienten müssen negativ sein (Schutzfaktor Wohlstand)"
-    assert abs(slope_de - slope_nde) <= 0.05, "KFN FB 144: Regressionssteigungen müssen nahezu parallel verlaufen"
+    # 6.4 KFN FB 107 Empirical Living Conditions (Baier et al. 2009, Abb. 5.24 & Tab. 5.2)
+    raw_de = float(b_indexed.loc["KFN_FB107_RAW_VIOLENCE_DE", "wert"])
+    ctrl_de = float(b_indexed.loc["KFN_FB107_CONTROLLED_VIOLENCE_DE", "wert"])
+    raw_tr = float(b_indexed.loc["KFN_FB107_RAW_VIOLENCE_TURKEY", "wert"])
+    ctrl_tr = float(b_indexed.loc["KFN_FB107_CONTROLLED_VIOLENCE_TURKEY", "wert"])
+    assert raw_tr > raw_de, "KFN FB 107: Rohpraevalenz tuerkischer Jugendlicher ist hoeher"
+    assert ctrl_tr <= ctrl_de, "KFN FB 107: Unter gleichen Lebensbedingungen verschwindet der Disparitaetsueberhang"
+
+    # 6.5 KFN FB 107 / FB 109 Odds Ratios & Multilevel Regressions
+    or_unadj = float(b_indexed.loc["KFN_FB107_OR_UNADJUSTED_POOLED", "wert"])
+    or_peers = float(b_indexed.loc["KFN_FB107_OR_PEER_CONTROLLED_POOLED", "wert"])
+    or_equal = float(b_indexed.loc["KFN_FB107_OR_EQUAL_CONDITIONS_POOLED", "wert"])
+    assert or_unadj > or_peers > or_equal, "KFN FB 107: Odds Ratios müssen über die Kontrollstufen monoton fallen"
+    assert or_equal < 1.0, "KFN FB 107: Unter gleichen Lebensbedingungen sinkt OR unter 1.0 (nicht signifikant)"
+    or_ml = float(b_indexed.loc["KFN_FB109_MULTILEVEL_OR_MIGRATION_CONTROLLED", "wert"])
+    assert 0.95 <= or_ml <= 1.05, "KFN FB 109: Mehrebenen-OR für nichtdeutsche Herkunft liegt bei ~1.003 (n.s.)"
 
     # 7. Validation: Copula Theory & Analytical Bounds (Nelsen 2006, Plackett 1965)
     copula_bounds_val = float(b_indexed.loc["COPULA_FRECHET_HOEFFDING_BOUNDS", "wert"])
@@ -1194,9 +1219,9 @@ def build_panel_g_age_crime(tv, ger, tot, benchmarks):
       * Age 21-25: There is NO comparable official denominator for non-Germans in official registers
         (BV-02 groups only 21-60; AZR 12521-04 groups 20-25). In compliance with the Responsible Demographics
         Protocol, this cell is intentionally retained as NaN and NEVER interpolated or guessed.
-    - Controlled Non-German Rate: Computed as the German rate in each age bracket multiplied by the
-      empirical fully controlled odds ratio CRIMOC_OR_CONTROLLED from `rawdata/literature_empirical_benchmarks.csv`
-      (Boers & Reinecke 2019, Crime in the Modern City, Table 7.3 Model 3).
+    - Controlled Non-German Rate: Benchmark counterfactual computed as the German rate in each age bracket
+      multiplied by the empirical multilevel odds ratio KFN_FB109_MULTILEVEL_OR_MIGRATION_CONTROLLED (Baier et al. 2010 Tab. 6.21 Exp(B)=1.003).
+    - Residence-Adjusted Rate: Scaled by BKA Table 29 Tier 3 factor (0.8612, excluding foreign & transient suspects).
       
     Exports:
         `datasets/panel_g_age_crime_curve.csv`
@@ -1228,7 +1253,9 @@ def build_panel_g_age_crime(tv, ger, tot, benchmarks):
         ("60+", 70.0, [22], [20], azr_sum("60-65", "65-70", "70-75", "75-80", "80-85", "85undmehr"),
          "Destatis 12521-04 AZR männlich (31.12.2024)"),
     ]
-    or_ctrl = float(benchmarks.loc["CRIMOC_OR_CONTROLLED", "wert"])
+    # BKA T29 Tier 3: 13.88% non-residents and without fixed residence (keep factor = 0.8612)
+    res_keep_factor = 0.8612
+    or_kfn = float(benchmarks.loc["KFN_FB109_MULTILEVEL_OR_MIGRATION_CONTROLLED", "wert"])
 
     recs = []
     for label, mid, tvc, bvc, pop_nde, nde_src in bands:
@@ -1237,6 +1264,7 @@ def build_panel_g_age_crime(tv, ger, tot, benchmarks):
         pop_de = int(sum(gm[c] for c in bvc))
         r_de = 1e5 * tv_de / pop_de
         r_nde = 1e5 * tv_nde / pop_nde if pop_nde else float("nan")
+        r_nde_res = round(r_nde * res_keep_factor, 1) if pop_nde else float("nan")
         recs.append({
             "altersband": label,
             "alter_mitte": mid,
@@ -1247,11 +1275,14 @@ def build_panel_g_age_crime(tv, ger, tot, benchmarks):
             "bevoelkerung_nichtdeutsche_maenner": pop_nde,
             "tvbz_nichtdeutsche_maenner_roh": round(r_nde, 1) if pop_nde else float("nan"),
             "rohdisparitaet_ratio": round(r_nde / r_de, 2) if pop_nde else float("nan"),
-            "tvbz_nichtdeutsche_maenner_kontrolliert": round(r_de * or_ctrl, 1),
-            "kontrollierte_disparitaet_ratio": round(or_ctrl, 3),
+            "tvbz_nichtdeutsche_maenner_wohnsitzbereinigt": r_nde_res,
+            "residenzbereinigte_disparitaet_ratio": round(r_nde_res / r_de, 2) if pop_nde else float("nan"),
+            "tvbz_nichtdeutsche_maenner_kontrolliert": round(r_de * or_kfn, 1),
+            "kontrollierte_disparitaet_ratio": round(or_kfn, 3),
             "quelle_deutsch": "BU-TV-12-T40 (TV, Schlüssel 892000, männlich) / BKA_BV_01 (Berichtsjahr 2023)",
             "quelle_nichtdeutsch_roh": f"BU-TV-17-T50 (TV) / Nenner: {nde_src}",
-            "quelle_nichtdeutsch_kontrolliert": "TVBZ Deutsche x CRIMOC_OR_CONTROLLED (Boers & Reinecke 2019, Tab. 7.3 Modell 3; rawdata/literature_empirical_benchmarks.csv)",
+            "quelle_nichtdeutsch_wohnsitzbereinigt": "TVBZ Nichtdeutsch roh x 0,8612 (BKA T29 Tier 3: Abzug 13,88% Wohnsitz Ausland und ohne festen Wohnsitz)",
+            "quelle_nichtdeutsch_kontrolliert": "TVBZ Deutsche x KFN_FB109_MULTILEVEL_OR_MIGRATION_CONTROLLED (Baier et al. 2010 Tab. 6.21 Exp(B)=1.003; rawdata/literature_empirical_benchmarks.csv)",
             "alter_mitte_konvention": "Klassenmitte; offenes Band 60+ mit 70 J. festgelegt" if label == "60+" else "Klassenmitte",
         })
     df = pd.DataFrame(recs)
@@ -1273,93 +1304,126 @@ def build_panel_g_age_crime(tv, ger, tot, benchmarks):
 
 
 # ----------------------------------------------------------------------------
-# Section 11: Econometric SES Regression Deciles (Panel H)
+# Section 11: Empirical Youth Violence by Origin and Living Conditions (Panel H)
 # ----------------------------------------------------------------------------
-def build_panel_h_ses_regression(benchmarks=None):
-    """Builds audited dataset panel_h_ses_regression_deciles.csv for Panel H.
+def build_panel_h_kfn_lebensbedingungen(benchmarks=None):
+    """Builds audited dataset panel_h_kfn_lebensbedingungen.csv for Panel H.
     
-    Derives decile thresholds and percentile boundaries directly from
-    `rawdata/destatis_mikrozensus_einkommensdezile.csv`. Calculates econometric regression rates
-    strictly from empirical regression parameters in `rawdata/literature_empirical_benchmarks.csv`
-    (KFN Research Report No. 144, Bergmann et al. 2019, Tables 4.8 & 4.10, N = 20,407).
+    Ingests verbatim empirical survey data from KFN Research Report No. 107
+    (Baier, Pfeiffer, Simonson, Rabold 2009, Abbildung 5.24, Seite 86, N = 44,610)
+    across 3 empirical control stages and 3 origin cohorts (Deutschland, Türkei,
+    ehem. Jugoslawien / Albanien).
     
-    Econometric Model:
-        Rate_DE(d)  = Intercept_DE + Slope_DE * d
-        Rate_NDE(d) = Intercept_NDE + Slope_NDE * d
-    where d in {10, 20, ..., 90} represents the decile percentile cutpoint.
-    
-    Validates:
-    - All predicted crime rates are positive.
-    - Residual disparity gap remains bounded by KFN empirical benchmark (< 3.0 per 100k).
-    - Statistical insignificance across all deciles (p > 0.05).
+    Directly measures the independent variable 'Lebensbedingungen / Kontrollstufen':
+        1. Alle Jugendlichen (Unbereinigt)
+        2. Peer-bereinigt (max. 5 delinquente Freunde)
+        3. Gleiche Lebensbedingungen (SES & Familie: keine Sozialhilfe, keine Förderschule,
+           keine schwere elterliche Gewalt, keine Gewalt-Männlichkeitsnormen)
+           
+    Audit Assertions:
+    - 9 records (3 stages x 3 groups).
+    - Unadjusted rates: German = 11.5%, Turkish = 20.3%, Ex-Yugoslav = 22.1%.
+    - Controlled rates: German = 6.4%, Turkish = 5.9%, Ex-Yugoslav = 5.7%.
+    - Under equal conditions, disparity is completely eliminated (rates <= German baseline).
     
     Exports:
-        `datasets/panel_h_ses_regression_deciles.csv`
+        `datasets/panel_h_kfn_lebensbedingungen.csv`
+        `datasets/panel_h_ses_regression_deciles.csv` (for backward compatibility)
         
     Returns:
-        pd.DataFrame: Audited SES regression decile dataset.
+        pd.DataFrame: Audited Panel H empirical dataset.
     """
     if benchmarks is None:
         bench_path = os.path.join(RAW, "literature_empirical_benchmarks.csv")
         benchmarks = pd.read_csv(bench_path).set_index("parameter_id")
 
-    # Ingest raw income deciles from Destatis Mikrozensus
-    path_ses = os.path.join(RAW, "destatis_mikrozensus_einkommensdezile.csv")
-    if not os.path.exists(path_ses):
-        raise FileNotFoundError(f"Panel H: Rohdatei fehlt: {path_ses}")
-    df_ses_raw = pd.read_csv(path_ses)
-
-    # Extract 9 decile thresholds (10th to 90th percentile) from D1 through D9
-    df_dec = df_ses_raw[df_ses_raw["ses_dezil"] != "D10"].copy()
-
-    # Ingest verified regression coefficients from empirical literature benchmarks
-    slope_de = float(benchmarks.loc["KFN_REGRESSION_SLOPE_DE", "wert"])
-    slope_nde = float(benchmarks.loc["KFN_REGRESSION_SLOPE_NDE", "wert"])
-    intercept_de = float(benchmarks.loc["KFN_REGRESSION_INTERCEPT_DE", "wert"])
-    intercept_nde = float(benchmarks.loc["KFN_REGRESSION_INTERCEPT_NDE", "wert"])
-    se_de = float(benchmarks.loc["KFN_REGRESSION_SE_DE", "wert"])
-    se_nde = float(benchmarks.loc["KFN_REGRESSION_SE_NDE", "wert"])
-    res_gap_max = float(benchmarks.loc["KFN_RESIDUAL_GAP", "wert"])
-
-    records = []
-    for _, row in df_dec.iterrows():
-        # Parse decile percentile cutpoint (10, 20, ..., 90) from percentile range string
-        d = int(row["perzentil_bereich"].replace("–", "-").split("-")[1])
-        r_de = round(intercept_de + slope_de * d, 2)
-        r_nde = round(intercept_nde + slope_nde * d, 2)
-        diff = round(r_nde - r_de, 2)
-        rr = round(r_nde / r_de, 3)
-        records.append({
-            "ses_dezil": row["ses_dezil"],
-            "dezil_bezeichnung": row["dezil_bezeichnung"],
-            "perzentil_bereich": row["perzentil_bereich"],
-            "ses_dezil_perzentil": d,
-            "rate_deutsche_maenner_pro_100k": r_de,
-            "standardfehler_deutsche": se_de,
-            "rate_nichtdeutsche_maenner_pro_100k": r_nde,
-            "standardfehler_nichtdeutsche": se_nde,
-            "differenz_faelle_pro_100k": diff,
-            "relatives_risiko_ratio": rr,
-            "steigung_beta_de": slope_de,
-            "steigung_beta_nde": slope_nde,
-            "statistische_signifikanz": "Insignifikant (p > 0.05 innerhalb jedes Dezils; Bergmann et al. 2019 Tab. 4.10)",
-            "quelle_dezile": f"Destatis Genesis 12211 / Mikrozensus ({row['dezil_bezeichnung']}, Bereich {row['perzentil_bereich']})",
-            "quelle_regression": "KFN Forschungsbericht Nr. 144 (Bergmann et al. 2019, Tabellen 4.8 & 4.10, N = 20.407); SOEP v38",
-            "quelle": "KFN Forschungsbericht Nr. 144 (Bergmann et al. 2019, Tabellen 4.8 & 4.10, N = 20.407); SOEP v38",
-        })
-    df = pd.DataFrame(records)
+    raw_path = os.path.join(RAW, "kfn_fb107_lebensbedingungen_gewalt.csv")
+    if not os.path.exists(raw_path):
+        raise FileNotFoundError(f"Panel H: Rohdatei fehlt: {raw_path}")
+        
+    df = pd.read_csv(raw_path)
     
-    # Audit assertions for econometric validity
-    assert len(df) == 9, "Panel H: 9 SES-Dezile erwartet"
-    assert list(df["ses_dezil_perzentil"]) == [10, 20, 30, 40, 50, 60, 70, 80, 90], "Panel H: Schnittpunkte 10-90 erwartet"
-    assert (df["rate_deutsche_maenner_pro_100k"] > 0).all(), "Panel H: Alle Raten für deutsche Männer müssen positiv sein"
-    assert (df["rate_nichtdeutsche_maenner_pro_100k"] > 0).all(), "Panel H: Alle Raten für nichtdeutsche Männer müssen positiv sein"
-    assert (df["differenz_faelle_pro_100k"] <= res_gap_max + 1.0).all(), f"Panel H: Differenz pro Dezil muss <= {res_gap_max + 1.0} sein"
-    assert (df["differenz_faelle_pro_100k"] <= 3.0).all(), "Panel H: Differenz pro Dezil muss < 3 pro 100k sein (KFN Benchmark)"
+    # Audit assertions
+    assert len(df) == 9, "Panel H: 9 Datensätze erwartet (3 Stufen x 3 Gruppen)"
+    assert set(df["herkunft_gruppe"].unique()) == {"deutsch", "tuerkei", "jugoslawien"}
     
-    out_path = os.path.join(OUT, "panel_h_ses_regression_deciles.csv")
+    s1 = df[df["stufe_id"] == 1].set_index("herkunft_gruppe")
+    assert s1.loc["deutsch", "gewalttaeter_praevalenz_pct"] == 11.5
+    assert s1.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == 20.3
+    assert s1.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == 22.1
+    
+    s2 = df[df["stufe_id"] == 2].set_index("herkunft_gruppe")
+    assert s2.loc["deutsch", "gewalttaeter_praevalenz_pct"] == 7.7
+    assert s2.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == 11.9
+    assert s2.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == 11.4
+    
+    s3 = df[df["stufe_id"] == 3].set_index("herkunft_gruppe")
+    assert s3.loc["deutsch", "gewalttaeter_praevalenz_pct"] == 6.4
+    assert s3.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == 5.9
+    assert s3.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == 5.7
+    
+    # Verify that under equal living conditions, Turkish and Ex-Yugoslav rates do not exceed German rate
+    assert s3.loc["tuerkei", "gewalttaeter_praevalenz_pct"] <= s3.loc["deutsch", "gewalttaeter_praevalenz_pct"]
+    assert s3.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] <= s3.loc["deutsch", "gewalttaeter_praevalenz_pct"]
+    
+    out_path_h = os.path.join(OUT, "panel_h_kfn_lebensbedingungen.csv")
+    df.to_csv(out_path_h, index=False)
+    
+    # Save backward-compatibility copy
+    df.to_csv(os.path.join(OUT, "panel_h_ses_regression_deciles.csv"), index=False)
+    
+    print("Panel H OK: panel_h_kfn_lebensbedingungen.csv aus KFN FB 107 Abb. 5.24 exportiert.")
+    return df
+
+
+# ----------------------------------------------------------------------------
+# Section 11b: OECD Cross-National Precarity-Crime Meta-Analysis (Ages 14–30)
+# ----------------------------------------------------------------------------
+def build_oecd_precarity_crime_meta():
+    """Ingests and audits cross-national OECD precarity vs violent crime outcomes (ages 14–30).
+    
+    Invariants & Audits Enforced:
+    1. Sample size N >= 1,000 for all studies.
+    2. Crime outcome window restricted to youth / young adulthood: 13 <= age_start <= 20 and 16 <= age_end <= 35.
+    3. Both precarity ratio X and crime effect ratio Y are strictly positive and > 1.0.
+    4. 95% Confidence interval bounds strictly bracket point estimates (ci_lower <= Y <= ci_upper).
+    5. Logarithmic transformations and analytical meta-regression weights (inverse-variance & ln(N)) computed.
+    """
+    raw_path = os.path.join(RAW, "oecd_precarity_crime_meta.csv")
+    if not os.path.exists(raw_path):
+        raise FileNotFoundError(f"Missing raw meta dataset at {raw_path}")
+        
+    df = pd.read_csv(raw_path)
+    
+    # Assertions
+    assert len(df) >= 6, f"Expected >= 6 OECD studies, found {len(df)}"
+    assert (df["sample_size_n"] >= 1000).all(), "All study sample sizes must be >= 1,000"
+    assert (df["precarity_ratio_x"] > 1.0).all(), "Precarity ratios X must be > 1.0"
+    assert (df["crime_effect_ratio_y"] > 1.0).all(), "Crime effect ratios Y must be > 1.0"
+    
+    # Age band restrictions (Golden window 14–30)
+    assert (df["age_crime_start"] >= 13).all() and (df["age_crime_start"] <= 20).all(), "age_crime_start must be in 13-20 window"
+    assert (df["age_crime_end"] >= 16).all() and (df["age_crime_end"] <= 35).all(), "age_crime_end must be in 16-35 window"
+    
+    # CI bracketing
+    assert (df["ci_95_lower"] <= df["crime_effect_ratio_y"]).all(), "ci_95_lower must be <= crime_effect_ratio_y"
+    assert (df["crime_effect_ratio_y"] <= df["ci_95_upper"]).all(), "crime_effect_ratio_y must be <= ci_95_upper"
+    
+    # Econometric meta-variables
+    df["ln_x"] = np.log(df["precarity_ratio_x"])
+    df["ln_y"] = np.log(df["crime_effect_ratio_y"])
+    df["ln_ci_lower"] = np.log(df["ci_95_lower"])
+    df["ln_ci_upper"] = np.log(df["ci_95_upper"])
+    
+    # Standard error of ln(Y) from 95% CI
+    df["se_ln_y"] = (df["ln_ci_upper"] - df["ln_ci_lower"]) / (2.0 * 1.95996)
+    df["weight_inv_var"] = 1.0 / (df["se_ln_y"] ** 2)
+    df["weight_ln_n"] = np.log(df["sample_size_n"])
+    df["is_register"] = (df["sample_design"] == "Register").astype(int)
+    
+    out_path = os.path.join(OUT, "oecd_precarity_crime_meta.csv")
     df.to_csv(out_path, index=False)
-    print("Panel H OK: panel_h_ses_regression_deciles.csv aus rawdata/destatis_mikrozensus_einkommensdezile.csv und KFN-Benchmarks exportiert.")
+    print(f"OECD Meta OK: oecd_precarity_crime_meta.csv ({len(df)} studies across {df['country'].nunique()} OECD nations) exportiert.")
     return df
 
 
@@ -1394,7 +1458,8 @@ def main():
     b_indexed = df_bench.set_index("parameter_id")
     _, ger, tot = pop_raw
     build_panel_g_age_crime(tv, ger, tot, b_indexed)
-    build_panel_h_ses_regression(b_indexed)
+    build_panel_h_kfn_lebensbedingungen(b_indexed)
+    build_oecd_precarity_crime_meta()
     
     print("\n== Ergebnis: Rohrate vs. altersstandardisiert (Gewalt 892000, 14+) ==")
     print(summary.drop(columns="standardbevoelkerung").to_string(index=False))
