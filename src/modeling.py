@@ -103,10 +103,10 @@ def compute_rate_ratio_ci(r1, n1, r2, n2, alpha=0.05):
     return rr, ci_lower, ci_upper, se_ln_rr
 
 
-def fit_bivariate_risk_surface(popt_full, benchmarks=None, age_grid=None, ses_grid=None, precarity_rr=2.60):
+def fit_bivariate_risk_surface(popt_full, benchmarks=None, age_grid=None, ses_grid=None, precarity_rr=2.54):
     """Calibrates a bivariate delinquency risk surface R(Age, SES) constrained by empirical BKA marginals
     across the full life course (Ages 0–80) and parameterized by the central OECD meta-regression
-    precarity relative risk (RR = 2.60x for German primary precarity deciles D1–D3; corridor [2.56x, 2.62x]).
+    precarity relative risk (RR = 2.54x for German primary precarity deciles D1–D3; corridor [2.17x, 2.81x]).
     
     Citations & Mathematical Derivation of the Distribution Shape:
     -------------------------------------------------------------
@@ -124,10 +124,10 @@ def fit_bivariate_risk_surface(popt_full, benchmarks=None, age_grid=None, ses_gr
          ~244 at age 11, ~591 at age 13) to peak in adolescence (~1,166 at age 16) and desisting in adulthood.
        
     2. OECD Precarity Meta-Regression Gradient (Panel F Calibration):
-       - Empirical Source: WLS meta-regression over landmark studies from OECD peer nations (datasets/oecd_precarity_crime_meta.csv).
+       - Empirical Source: DerSimonian-Laird Random-Effects Meta-Regression (REMR, tau = 0.072) over landmark studies from OECD peer nations (datasets/oecd_precarity_crime_meta.csv).
        - Central Projection: For German primary income precarity (Destatis Mikrozensus D1–D3, X = 2.64),
-         ln(Y) = 0.871 + 0.087 * ln(2.64) => Y_hat = 2.60x (corridor [2.56x, 2.62x]).
-       - Replaces arbitrary single-study selection with an empirical OECD-wide calibration anchor.
+         ln(Y) = 0.637 + 0.303 * ln(2.64) => Y_hat = 2.54x (corridor [2.17x, 2.81x]).
+       - Replaces arbitrary single-study selection with an empirical OECD-wide random-effects calibration anchor.
          
     3. SES Precarity Threshold Function (Destatis Microcensus EU-SILC):
        - Threshold Location: Centered at SES = 40 (lowest 4 deciles D1–D4, Genesis 12211-0001, Panels C & E),
@@ -272,50 +272,86 @@ def fit_models(data):
     y_ln = df_oecd["ln_y"].to_numpy(dtype=float)
     w_iv = df_oecd["weight_inv_var"].to_numpy(dtype=float)
     is_reg = df_oecd["is_register"].to_numpy(dtype=float)
+    k_studies = len(y_ln)
+    p_params = 2  # intercept + slope
 
-    # 1. Bivariate OLS
+    # 1. Bivariate OLS (unweighted baseline)
     slope_ols, intercept_ols, r_val_ols, p_val_ols, std_err_ols = stats.linregress(x_ln, y_ln)
 
-    # 2. Weighted Least Squares (WLS) with inverse variance
-    W = np.diag(w_iv)
+    # 2. Fixed-Effects WLS (preparatory step to compute Cochran's Q and between-study heterogeneity tau^2)
     X_mat = np.column_stack([np.ones_like(x_ln), x_ln])
-    XtW = X_mat.T @ W
-    beta_wls = np.linalg.inv(XtW @ X_mat) @ (XtW @ y_ln)
-    e_wls = y_ln - (X_mat @ beta_wls)
-    df_resid = len(y_ln) - 2
-    s2_wls = np.sum(w_iv * (e_wls ** 2)) / df_resid
-    cov_beta_wls = s2_wls * np.linalg.inv(XtW @ X_mat)
-    se_beta_wls = np.sqrt(np.diag(cov_beta_wls))
+    W_fe = np.diag(w_iv)
+    XtW_fe = X_mat.T @ W_fe
+    beta_fe = np.linalg.inv(XtW_fe @ X_mat) @ (XtW_fe @ y_ln)
+    e_fe = y_ln - (X_mat @ beta_fe)
 
-    # 3. Multivariable WLS with register dummy
+    # Cochran's Q test for heterogeneity across OECD landmark cohorts
+    q_stat = float(np.sum(w_iv * (e_fe ** 2)))
+    df_q = k_studies - p_params
+    p_q_stat = float(1.0 - stats.chi2.cdf(q_stat, df_q))
+
+    # DerSimonian-Laird tau^2 estimator for meta-regression:
+    # tau^2 = max(0, (Q - (k - p)) / (sum(w) - tr((X^T W X)^(-1) X^T W^2 X)))
+    sum_w = np.sum(w_iv)
+    W2_fe = np.diag(w_iv ** 2)
+    tr_term = float(np.trace(np.linalg.inv(XtW_fe @ X_mat) @ (X_mat.T @ W2_fe @ X_mat)))
+    denom_dsl = sum_w - tr_term
+    tau2 = max(0.0, (q_stat - df_q) / denom_dsl) if denom_dsl > 0 else 0.0
+    tau = np.sqrt(tau2)
+
+    # 3. DerSimonian-Laird Random-Effects Meta-Regression (REMR)
+    # Rebalances weights w_i* = 1 / (sigma_i^2 + tau^2), preventing single massive registers
+    # (e.g. Sweden Bra 2021 with N > 8M) from collapsing estimation uncertainty.
+    w_re = 1.0 / (1.0 / w_iv + tau2)
+    W_re = np.diag(w_re)
+    XtW_re = X_mat.T @ W_re
+    cov_re_unadj = np.linalg.inv(XtW_re @ X_mat)
+    beta_re = cov_re_unadj @ (XtW_re @ y_ln)
+    e_re = y_ln - (X_mat @ beta_re)
+
+    # Conservative Knapp-Hartung small-sample standard error adjustment
+    q_kn = float(np.sum(w_re * (e_re ** 2)) / df_q)
+    cov_beta_re = max(1.0, q_kn) * cov_re_unadj
+    se_beta_re = np.sqrt(np.diag(cov_beta_re))
+    t_crit = stats.t.ppf(0.975, df_q)
+    p_beta_re = 2.0 * (1.0 - stats.t.cdf(np.abs(beta_re / se_beta_re), df_q))
+
+    # 4. Multivariable REMR with register dummy
     X_mat3 = np.column_stack([np.ones_like(x_ln), x_ln, is_reg])
-    XtW3 = X_mat3.T @ W
-    beta_wls3 = np.linalg.inv(XtW3 @ X_mat3) @ (XtW3 @ y_ln)
+    XtW_re3 = X_mat3.T @ W_re
+    beta_re3 = np.linalg.inv(XtW_re3 @ X_mat3) @ (XtW_re3 @ y_ln)
 
-    # Prediction curves for plotting
+    # Prediction curves for plotting (REMR)
     x_plot = np.linspace(2.0, 3.8, 200)
     ln_x_plot = np.log(x_plot)
     y_plot_ols = np.exp(intercept_ols + slope_ols * ln_x_plot)
-    y_plot_wls = np.exp(beta_wls[0] + beta_wls[1] * ln_x_plot)
+    y_plot_re = np.exp(beta_re[0] + beta_re[1] * ln_x_plot)
 
-    # 95% Confidence Band for WLS mean prediction
+    # 95% Confidence Band for REMR mean prediction
     X_pred_mat = np.column_stack([np.ones_like(ln_x_plot), ln_x_plot])
-    var_pred_mean = np.sum((X_pred_mat @ cov_beta_wls) * X_pred_mat, axis=1)
+    var_pred_mean = np.sum((X_pred_mat @ cov_beta_re) * X_pred_mat, axis=1)
     se_pred_mean = np.sqrt(var_pred_mean)
-    t_crit = stats.t.ppf(0.975, df_resid)
-    ci_wls_lower = np.exp((beta_wls[0] + beta_wls[1] * ln_x_plot) - t_crit * se_pred_mean)
-    ci_wls_upper = np.exp((beta_wls[0] + beta_wls[1] * ln_x_plot) + t_crit * se_pred_mean)
+    ci_re_lower = np.exp((beta_re[0] + beta_re[1] * ln_x_plot) - t_crit * se_pred_mean)
+    ci_re_upper = np.exp((beta_re[0] + beta_re[1] * ln_x_plot) + t_crit * se_pred_mean)
+
+    # 95% Prediction Interval (incorporating between-country heterogeneity tau^2)
+    se_pred_pi = np.sqrt(var_pred_mean + tau2)
+    pi_re_lower = np.exp((beta_re[0] + beta_re[1] * ln_x_plot) - t_crit * se_pred_pi)
+    pi_re_upper = np.exp((beta_re[0] + beta_re[1] * ln_x_plot) + t_crit * se_pred_pi)
 
     # Predictions for German empirical precarity ratios
-    def predict_de(x_val):
+    def predict_de_re(x_val):
         ln_x_v = np.log(x_val)
         x_vec = np.array([1.0, ln_x_v])
-        ln_y_hat = float(x_vec @ beta_wls)
-        se_p = np.sqrt(float(x_vec @ cov_beta_wls @ x_vec))
+        ln_y_hat = float(x_vec @ beta_re)
+        se_p = np.sqrt(float(x_vec @ cov_beta_re @ x_vec))
+        se_pi = np.sqrt(float(x_vec @ cov_beta_re @ x_vec + tau2))
         return {
             "y_hat": float(np.exp(ln_y_hat)),
             "ci_lower": float(np.exp(ln_y_hat - t_crit * se_p)),
             "ci_upper": float(np.exp(ln_y_hat + t_crit * se_p)),
+            "pi_lower": float(np.exp(ln_y_hat - t_crit * se_pi)),
+            "pi_upper": float(np.exp(ln_y_hat + t_crit * se_pi)),
         }
 
     df_ses_p = data["ses_dist"]
@@ -325,29 +361,65 @@ def fit_models(data):
     armut_de = float(bench.loc["DESTATIS_ARMUT_DE", "wert"])
     x_silc = round(armut_nde / armut_de, 2)
 
-    p_ses40 = predict_de(x_ses40)
-    p_d13 = predict_de(x_d13)
-    p_silc = predict_de(x_silc)
-    rr_ctrl_central = round(float(p_d13["y_hat"]), 2)  # Dynamically derived OECD WLS Central Projection
+    p_ses40 = predict_de_re(x_ses40)
+    p_d13 = predict_de_re(x_d13)
+    p_silc = predict_de_re(x_silc)
+    rr_ctrl_central = round(float(p_d13["y_hat"]), 2)  # Dynamically derived OECD REMR Central Projection (2.54x)
 
     oecd_reg = {
         "df_oecd": df_oecd,
         "beta_ols": [intercept_ols, slope_ols],
         "r2_ols": r_val_ols ** 2,
         "p_val_ols": p_val_ols,
-        "beta_wls": beta_wls,
-        "se_beta_wls": se_beta_wls,
-        "cov_beta_wls": cov_beta_wls,
-        "beta_wls3": beta_wls3,
+        "q_stat": q_stat,
+        "p_q_stat": p_q_stat,
+        "tau2": tau2,
+        "tau": tau,
+        "w_re": w_re,
+        "beta_re": beta_re,
+        "se_beta_re": se_beta_re,
+        "p_beta_re": p_beta_re,
+        "cov_beta_re": cov_beta_re,
+        "beta_re3": beta_re3,
         "x_plot": x_plot,
         "y_plot_ols": y_plot_ols,
-        "y_plot_wls": y_plot_wls,
-        "ci_wls_lower": ci_wls_lower,
-        "ci_wls_upper": ci_wls_upper,
+        "y_plot_re": y_plot_re,
+        "ci_re_lower": ci_re_lower,
+        "ci_re_upper": ci_re_upper,
+        "pi_re_lower": pi_re_lower,
+        "pi_re_upper": pi_re_upper,
+        # Backwards compatibility aliases
+        "beta_wls": beta_re,
+        "se_beta_wls": se_beta_re,
+        "cov_beta_wls": cov_beta_re,
+        "beta_wls3": beta_re3,
+        "y_plot_wls": y_plot_re,
+        "ci_wls_lower": ci_re_lower,
+        "ci_wls_upper": ci_re_upper,
         "german_projections": {
             "x_ses40": x_ses40,
             "x_d13": x_d13,
             "x_silc": x_silc,
+            "y_ses40_re": p_ses40["y_hat"],
+            "ci_ses40_lower": p_ses40["ci_lower"],
+            "ci_ses40_upper": p_ses40["ci_upper"],
+            "pi_ses40_lower": p_ses40["pi_lower"],
+            "pi_ses40_upper": p_ses40["pi_upper"],
+            "y_d13_re": p_d13["y_hat"],
+            "ci_d13_lower": p_d13["ci_lower"],
+            "ci_d13_upper": p_d13["ci_upper"],
+            "pi_d13_lower": p_d13["pi_lower"],
+            "pi_d13_upper": p_d13["pi_upper"],
+            "y_silc_re": p_silc["y_hat"],
+            "ci_silc_lower": p_silc["ci_lower"],
+            "ci_silc_upper": p_silc["ci_upper"],
+            "pi_silc_lower": p_silc["pi_lower"],
+            "pi_silc_upper": p_silc["pi_upper"],
+            "ci_corridor_lower": p_ses40["ci_lower"],
+            "ci_corridor_upper": p_silc["ci_upper"],
+            "pi_corridor_lower": p_ses40["pi_lower"],
+            "pi_corridor_upper": p_silc["pi_upper"],
+            # Backwards compatibility keys
             "y_ses40_wls": p_ses40["y_hat"],
             "ci_ses40_lower": p_ses40["ci_lower"],
             "ci_ses40_upper": p_ses40["ci_upper"],
@@ -562,9 +634,9 @@ def fit_models(data):
         "ratio_raw": float(male_std["verhaeltnis_roh"]),               # 4.34
         "ratio_res": round(wf_tier2_nde / float(male_std["tvbz_roh_14plus_deutsch"]), 2),  # 3.74
         "ratio_std": round(wf_comb_nde / wf_base_de, 2),               # 3.08
-        "rr_proj_lo": round(p_ses40["y_hat"], 2),
-        "rr_proj_hi": round(p_silc["y_hat"], 2),
-        "rr_proj_central": round(p_d13["y_hat"], 2),
+        "rr_proj_lo": round(p_ses40["ci_lower"], 2),                   # 2.17 (OECD REMR German Corridor Lower 95% CI)
+        "rr_proj_hi": round(p_silc["ci_upper"], 2),                    # 2.81 (OECD REMR German Corridor Upper 95% CI)
+        "rr_proj_central": round(p_d13["y_hat"], 2),                   # 2.54 (OECD REMR D1-D3 Central Estimate)
         "bottoms": [0.0, wf_tier2_nde, wf_comb_nde, 0.0, 0.0],
         "heights": [wf_raw_nde, wf_delta_res, wf_delta_demo, wf_comb_nde, wf_base_de],
     }
@@ -818,11 +890,10 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
     
     Data source: datasets/oecd_precarity_crime_meta.csv (10 landmark studies across 7 OECD countries,
     strictly restricted to ages 14–33 young adulthood violent offending).
-    Demonstrates that across OECD countries, the empirical violent crime effect ratio associated with
-    socioeconomic precarity clusters tightly around 2.34x–3.10x (WLS baseline exp(beta_0) = 2.39x, p < 0.001;
-    slope beta_1 = 0.087, p = 0.169 n.s. across observed range), directly validating the Swedish LISA
-    population register benchmark (RR = 2.41x) and calibrating the expected German crime effect multiple
-    for German precarity ratios (X_DE in [2.21, 2.90] -> Y_hat in [2.56x, 2.62x], central 2.60x).
+    Employs DerSimonian-Laird Random-Effects Meta-Regression (REMR) with Knapp-Hartung standard errors,
+    properly accounting for between-country heterogeneity (tau^2 = 0.00515, tau = 0.0717; Cochran Q = 34.11, p < 0.0001).
+    This rebalances weights (capping the massive Swedish register at 15.5%) and establishes the empirical
+    German calibration corridor [2.17x, 2.81x] (central 2.54x at Mikrozensus D1-D3).
     """
     is_de = (lang == "de")
     df = reg["df_oecd"]
@@ -835,16 +906,25 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
     ax.axvspan(x_de_min, x_de_max, color="#FFF9C4", alpha=0.55, zorder=0,
                label=f"Prekaritätsspanne Deutschland (X_DE = {x_de_min:.2f}–{x_de_max:.2f})" if is_de else f"German Precarity Range (X_DE = {x_de_min:.2f}–{x_de_max:.2f})")
 
-    # 2. WLS Regression Line & 95% Confidence Band
+    # 2. REMR Regression Line & 95% Confidence Band
     x_plot = reg["x_plot"]
-    y_plot_wls = reg["y_plot_wls"]
-    ci_lower = reg["ci_wls_lower"]
-    ci_upper = reg["ci_wls_upper"]
+    y_plot_re = reg.get("y_plot_re", reg["y_plot_wls"])
+    ci_lower = reg.get("ci_re_lower", reg["ci_wls_lower"])
+    ci_upper = reg.get("ci_re_upper", reg["ci_wls_upper"])
+    pi_lower = reg.get("pi_re_lower", None)
+    pi_upper = reg.get("pi_re_upper", None)
 
-    ax.fill_between(x_plot, ci_lower, ci_upper, color="#4a90e2", alpha=0.18, zorder=2,
-                    label="95% Konfidenzband (WLS)" if is_de else "95% Confidence Band (WLS)")
-    ax.plot(x_plot, y_plot_wls, color="#1f4e78", linewidth=2.4 if is_standalone else 2.0, zorder=3,
-            label=f"WLS-Metaregression: ln(Y) = {reg['beta_wls'][0]:.3f} + {reg['beta_wls'][1]:.3f} ln(X)" if is_de else f"WLS Meta-Regression: ln(Y) = {reg['beta_wls'][0]:.3f} + {reg['beta_wls'][1]:.3f} ln(X)")
+    ax.fill_between(x_plot, ci_lower, ci_upper, color="#4a90e2", alpha=0.20, zorder=2,
+                    label=f"95% Konfidenzband (REMR, τ = {reg['tau']:.3f})" if is_de else f"95% Confidence Band (REMR, τ = {reg['tau']:.3f})")
+    
+    if pi_lower is not None and pi_upper is not None and is_standalone:
+        ax.plot(x_plot, pi_lower, color="#1f4e78", linestyle=":", lw=1.2, alpha=0.75,
+                label="95% Prognoseintervall (PI)" if is_de else "95% Prediction Interval (PI)")
+        ax.plot(x_plot, pi_upper, color="#1f4e78", linestyle=":", lw=1.2, alpha=0.75)
+
+    beta_re = reg.get("beta_re", reg["beta_wls"])
+    ax.plot(x_plot, y_plot_re, color="#1f4e78", linewidth=2.4 if is_standalone else 2.0, zorder=3,
+            label=f"REMR: ln(Y) = {beta_re[0]:.3f} + {beta_re[1]:.3f} ln(X)" if is_de else f"REMR: ln(Y) = {beta_re[0]:.3f} + {beta_re[1]:.3f} ln(X)")
 
     # 4. Scatter Plot of Studies with 95% Error Bars
     reg_df = df[df["is_register"] == 1]
@@ -897,37 +977,46 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
                     bbox=dict(boxstyle="round,pad=0.18", fc="white", ec="gray", alpha=0.88, lw=0.6))
 
     # 5. German Projection Callout Box
-    proj = reg["german_projections"]
+    y_ses40 = proj.get("y_ses40_re", proj.get("y_ses40_wls"))
+    y_d13 = proj.get("y_d13_re", proj.get("y_d13_wls"))
+    y_silc = proj.get("y_silc_re", proj.get("y_silc_wls"))
+    ci_cor_lo = proj.get("ci_corridor_lower", proj.get("ci_ses40_lower"))
+    ci_cor_hi = proj.get("ci_corridor_upper", proj.get("ci_silc_upper"))
+    pi_cor_lo = proj.get("pi_corridor_lower", 1.98)
+    pi_cor_hi = proj.get("pi_corridor_upper", 3.13)
+
     if is_standalone:
         p_box_text = (
-            "Projektion für Deutschland (OECD-WLS Metaregression):\n"
-            f"• Mikrozensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {proj['y_ses40_wls']:.2f}× [95%-KI: {proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• Mikrozensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {proj['y_d13_wls']:.2f}× [95%-KI: {proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Zentralwert Panels G & I)\n"
-            f"• EU-SILC Armutsrisiko (X = {x_de_max:.2f}): Ŷ = {proj['y_silc_wls']:.2f}× [95%-KI: {proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> Empirischer OECD-Kalibrierungskorridor: [{proj['ci_ses40_lower']:.2f}×–{proj['ci_silc_upper']:.2f}×], Zentralwert: {proj['y_d13_wls']:.2f}×"
+            f"Projektion für Deutschland (OECD-REMR Metaregression, τ = {reg['tau']:.3f}):\n"
+            f"• Mikrozensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [95%-KI: {proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
+            f"• Mikrozensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [95%-KI: {proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Zentralwert Panels G & I)\n"
+            f"• EU-SILC Armutsrisiko (X = {x_de_max:.2f}): Ŷ = {y_silc:.2f}× [95%-KI: {proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
+            f"==> Empirischer OECD-Kalibrierungskorridor (95%-KI): [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×], Zentralwert: {y_d13:.2f}×\n"
+            f"    (95%-Prognoseintervall über Korridor: [{pi_cor_lo:.2f}×–{pi_cor_hi:.2f}×] | Q = {reg['q_stat']:.1f}, p < 0,001)"
             if is_de else
-            "German Calibration Projection (OECD WLS Meta-Regression):\n"
-            f"• Microcensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {proj['y_ses40_wls']:.2f}× [95% CI: {proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• Microcensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {proj['y_d13_wls']:.2f}× [95% CI: {proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Central Value Panels G & I)\n"
-            f"• EU-SILC Poverty Risk (X = {x_de_max:.2f}): Ŷ = {proj['y_silc_wls']:.2f}× [95% CI: {proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> Empirical OECD Calibration Corridor: [{proj['ci_ses40_lower']:.2f}×–{proj['ci_silc_upper']:.2f}×], Central Value: {proj['y_d13_wls']:.2f}×"
+            f"German Calibration Projection (OECD REMR Meta-Regression, τ = {reg['tau']:.3f}):\n"
+            f"• Microcensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [95% CI: {proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
+            f"• Microcensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [95% CI: {proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Central Value Panels G & I)\n"
+            f"• EU-SILC Poverty Risk (X = {x_de_max:.2f}): Ŷ = {y_silc:.2f}× [95% CI: {proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
+            f"==> Empirical OECD Calibration Corridor (95% CI): [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×], Central: {y_d13:.2f}×\n"
+            f"    (95% Prediction Interval across Corridor: [{pi_cor_lo:.2f}×–{pi_cor_hi:.2f}×] | Q = {reg['q_stat']:.1f}, p < 0.001)"
         )
-        fs_box = 8.5
+        fs_box = 8.2
     else:
         p_box_text = (
-            f"Projektion Dt. (OECD-WLS):\n"
-            f"• SES < 40 (X={x_de_min:.2f}): Ŷ = {proj['y_ses40_wls']:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ = {proj['y_d13_wls']:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Zentral)\n"
-            f"• EU-SILC (X={x_de_max:.2f}): Ŷ = {proj['y_silc_wls']:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> OECD-Zentralwert: {proj['y_d13_wls']:.2f}× (Panels G & I)"
+            f"Projektion Dt. (OECD-REMR, τ={reg['tau']:.3f}):\n"
+            f"• SES < 40 (X={x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
+            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Zentral)\n"
+            f"• EU-SILC (X={x_de_max:.2f}): Ŷ = {y_silc:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
+            f"==> 95%-KI-Korridor: [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×] | Zentral: {y_d13:.2f}×"
             if is_de else
-            f"German Proj. (OECD WLS):\n"
-            f"• SES < 40 (X={x_de_min:.2f}): Ŷ = {proj['y_ses40_wls']:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ = {proj['y_d13_wls']:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Central)\n"
-            f"• EU-SILC (X={x_de_max:.2f}): Ŷ = {proj['y_silc_wls']:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> OECD Central Value: {proj['y_d13_wls']:.2f}× (Panels G & I)"
+            f"German Proj. (OECD REMR, τ={reg['tau']:.3f}):\n"
+            f"• SES < 40 (X={x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
+            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Central)\n"
+            f"• EU-SILC (X={x_de_max:.2f}): Ŷ = {y_silc:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
+            f"==> 95% CI Corridor: [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×] | Central: {y_d13:.2f}×"
         )
-        fs_box = 7.0
+        fs_box = 6.8
 
     ax.text(0.03, 0.96, p_box_text, transform=ax.transAxes, va="top", ha="left",
             fontsize=fs_box, fontweight="bold",
@@ -937,19 +1026,19 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
     num_studies = len(df)
     num_countries = df["country"].nunique()
     title_str = (
-        f"(F) Empirische OECD-Metaregression: Prekaritätsdisparität vs. Gewaltdelinquenz-Effekt\n"
-        f"[{num_studies} internationale Landmark-Studien aus {num_countries} OECD-Staaten | Jungerwachsenenalter 14–33 J.]"
+        f"(F) Empirische OECD-Metaregression (Random Effects REMR, τ = {reg['tau']:.3f}):\n"
+        f"Prekaritätsdisparität vs. Gewaltdelinquenz-Effekt [{num_studies} Studien, {num_countries} OECD-Staaten | 14–33 J.]"
         if is_de else
-        f"(F) Empirical OECD Meta-Regression: Precarity Disparity vs. Violent Offending Effect Ratio\n"
-        f"[{num_studies} International Landmark Studies across {num_countries} OECD Peer Nations | Young Adulthood (Ages 14–33)]"
+        f"(F) Empirical OECD Meta-Regression (Random Effects REMR, τ = {reg['tau']:.3f}):\n"
+        f"Precarity Disparity vs. Violent Crime Effect Ratio [{num_studies} Studies, {num_countries} OECD Nations | 14–33 Y.]"
     )
-    ax.set_title(title_str, fontweight="bold", fontsize=10.5 if is_standalone else 9.2, pad=8)
+    ax.set_title(title_str, fontweight="bold", fontsize=10.2 if is_standalone else 9.0, pad=8)
     ax.set_xlabel("Prekaritäts-Disparitätsverhältnis in Studienpopulation (X = Prekär / Ref.)" if is_de else "Precarity Disparity Ratio in Study Population (X = Precarious / Ref.)", fontsize=9.2 if is_standalone else 8.2)
     ax.set_ylabel("Gewaltkriminalitäts-Effektverhältnis (Y = RR, HR, OR, IRR)" if is_de else "Violent Crime Effect Ratio (Y = RR, HR, OR, IRR)", fontsize=9.2 if is_standalone else 8.2)
 
     ax.set_xlim(2.0, 3.8)
     ax.set_ylim(1.8, 3.85)
-    ax.legend(loc="lower right", fontsize=8.0 if is_standalone else 6.2, frameon=True, facecolor="white", framealpha=0.92)
+    ax.legend(loc="lower right", fontsize=7.8 if is_standalone else 6.0, frameon=True, facecolor="white", framealpha=0.92)
 
 
 def render_panel_g_risk_matrix(ax, m, lang="de", is_standalone=False, fig=None):
@@ -958,6 +1047,11 @@ def render_panel_g_risk_matrix(ax, m, lang="de", is_standalone=False, fig=None):
     age_m = m["age_m"]
     ses_m = m["ses_m"]
     risk_m = m["risk_m"]
+    rr_ctrl = m.get("rr_ctrl_central", 2.54)
+    proj = m.get("oecd_reg", {}).get("german_projections", {})
+    ci_lo = proj.get("ci_corridor_lower", 2.17)
+    ci_hi = proj.get("ci_corridor_upper", 2.81)
+
     contour = ax.contourf(age_m, ses_m, risk_m, levels=25, cmap="viridis")
     cs = ax.contour(age_m, ses_m, risk_m, levels=[150, 400, 800, 1400, 2200], colors="white", alpha=0.35, linewidths=0.8)
     ax.clabel(cs, inline=True, fontsize=7.5 if not is_standalone else 8.0, fmt="%d")
@@ -970,18 +1064,32 @@ def render_panel_g_risk_matrix(ax, m, lang="de", is_standalone=False, fig=None):
     ax.add_patch(Rectangle((14, 0), 16, 40, fill=False, edgecolor="cyan", lw=2.2 if not is_standalone else 2.5, ls="--"))
     clust_txt = "Hochrisiko-Cluster\n(14–30 J. & SES < 40)\n[5,04× in Panel E]" if is_de else "High-Risk Cluster\n(14–30 Y. & SES < 40)\n[5.04× in Panel E]"
     ax.text(15, 42, clust_txt, color="cyan", fontweight="bold", fontsize=7.8 if not is_standalone else 8.5)
+
+    # Precarity Gradient Callout Box in top-right corner
+    info_box_txt = (
+        f"OECD-Prekaritätsgradient:\nRR = {rr_ctrl:.2f}× [95%-KI: {ci_lo:.2f}–{ci_hi:.2f}×]\n(D1–D3 Mikrozensus)"
+        if is_de else
+        f"OECD Precarity Gradient:\nRR = {rr_ctrl:.2f}× [95% CI: {ci_lo:.2f}–{ci_hi:.2f}×]\n(D1–D3 Microcensus)"
+    )
+    ax.text(0.97, 0.96, info_box_txt, transform=ax.transAxes, ha="right", va="top",
+            fontsize=7.2 if not is_standalone else 8.2, fontweight="bold", color="white",
+            bbox=dict(boxstyle="round,pad=0.25", fc="#263238", ec="cyan", lw=1.0, alpha=0.85))
+
     if is_standalone:
         ax.annotate("Verzögerte Desistance bei Prekarität\n(Sampson & Laub 1993, Laub 2003 OR = 0.61)" if is_de else "Delayed Desistance under Precarity\n(Sampson & Laub 1993, Laub 2003 OR = 0.61)",
                     xy=(40, 18), xytext=(42, 55),
                     arrowprops=dict(facecolor="white", shrink=0.08, width=1.2, headwidth=5), color="white", fontweight="bold", fontsize=8.5,
                     bbox=dict(boxstyle="round,pad=0.25", fc="#263238", ec="white", lw=0.8))
-        rr_ctrl = m.get("rr_ctrl_central", 2.60)
-        plt.figtext(0.08, 0.005, f"Modellform: BKA-PKS-T40-Altersmarginal über Lebensverlauf (0–80 J., NLS-Fit mit Onset) × OECD-WLS-Prekaritätsgradient (Zentralwert RR = {rr_ctrl:.2f}× bei SES < 40; D1–D3 Projektion aus Panel F) & Desistance-Verzögerung (Laub & Sampson 2003 OR = 0,61) bei exakter Marginalkonsistenz.", fontsize=6.8, style="italic")
-    rr_ctrl = m.get("rr_ctrl_central", 2.60)
+        fig_text = (
+            f"Modellform: BKA-PKS-T40-Altersmarginal über Lebensverlauf (0–80 J., NLS-Fit mit Onset) × OECD-REMR-Prekaritätsgradient (Zentralwert RR = {rr_ctrl:.2f}× bei SES < 40; D1–D3 Projektion aus Panel F; 95%-KI: [{ci_lo:.2f}×–{ci_hi:.2f}×]) & Desistance-Verzögerung (Laub & Sampson 2003 OR = 0,61) bei exakter Marginalkonsistenz."
+            if is_de else
+            f"Model specification: BKA PKS T40 full life-course age marginal (ages 0–80, NLS fit with onset) × OECD REMR precarity gradient (central value RR = {rr_ctrl:.2f}× at SES < 40; D1–D3 projection from Panel F; 95% CI: [{ci_lo:.2f}×–{ci_hi:.2f}×]) & desistance delay (Laub & Sampson 2003 OR = 0.61) under exact marginal conservation."
+        )
+        plt.figtext(0.08, 0.005, fig_text, fontsize=6.8, style="italic")
     title = (
-        f"(G) Bivariates Delinquenzmodell: Alter × SES [0–80 J. | BKA PKS T40 & OECD-WLS RR = {rr_ctrl:.2f}×]"
+        f"(G) Bivariates Delinquenzmodell: Alter × SES [0–80 J. | BKA PKS T40 & OECD-REMR RR = {rr_ctrl:.2f}×]"
         if is_de else
-        f"(G) Bivariate Delinquency Model: Age × SES [Ages 0–80 | BKA PKS T40 & OECD WLS RR = {rr_ctrl:.2f}×]"
+        f"(G) Bivariate Delinquency Model: Age × SES [Ages 0–80 | BKA PKS T40 & OECD REMR RR = {rr_ctrl:.2f}×]"
     )
     ax.set_title(title, fontweight="bold", fontsize=9.2 if not is_standalone else 10.0)
     ax.set_xlabel("Alter in Jahren (0–80)" if is_de else "Age in Years (0–80)", fontsize=9.2 if not is_standalone else 10.0)
@@ -1040,8 +1148,8 @@ def render_bka_register_waterfall_panel(ax, wf, lang="de", is_standalone=False, 
         title = f"({panel_letter}) Amtliche BKA-Register-Dekomposition [Männer 14+]\n[BKA PKS 2023 T29/T40/T50 & Destatis Zensus 2022]"
         ylabel = "TVBZ (Verdächtige pro 100.000 Männer 14+)"
         ann_text = f"Verbleibende Hellfelddisparität: {wf['ratio_std']:.2f}× (+{((wf['ratio_std'] - 1.0) * 100):.0f} %)\n(Amtliche Grenze: PKS erfasst keinen SES/Anzeige)\n→ Prekaritätskontrolle: siehe Panel F & I"
-        rr_lo = wf.get("rr_proj_lo", 2.56)
-        rr_hi = wf.get("rr_proj_hi", 2.62)
+        rr_lo = wf.get("rr_proj_lo", 2.17)
+        rr_hi = wf.get("rr_proj_hi", 2.81)
         disclaimer = f"Registergrenze (Hellfeld): Amtliche Kriminalstatistik erfasst Tatverdächtige, kein Dunkelfeld und keinen SES.\nDie {wf['ratio_std']:.2f}×-Registerdisparität wird durch die OECD-Prekaritätskontrolle (Panel F & I: {rr_lo:.2f}×–{rr_hi:.2f}×) und Anzeigebias im Dunkelfeld dekonstruiert."
     else:
         stages = [
@@ -1054,8 +1162,8 @@ def render_bka_register_waterfall_panel(ax, wf, lang="de", is_standalone=False, 
         title = f"({panel_letter}) Official BKA Register Decomposition [Males 14+]\n[BKA PKS 2023 T29/T40/T50 & Destatis Census 2022]"
         ylabel = "TVBZ (Suspects per 100,000 Males 14+)"
         ann_text = f"Residual Register Disparity: {wf['ratio_std']:.2f}× (+{((wf['ratio_std'] - 1.0) * 100):.0f} %)\n(Administrative limit: PKS lacks SES/reporting)\n→ Precarity Control: see Panels F & I"
-        rr_lo = wf.get("rr_proj_lo", 2.56)
-        rr_hi = wf.get("rr_proj_hi", 2.62)
+        rr_lo = wf.get("rr_proj_lo", 2.17)
+        rr_hi = wf.get("rr_proj_hi", 2.81)
         disclaimer = f"Register Boundary (Hellfeld): Official police statistics measure suspects, not darkfield crimes or SES.\nResidual {wf['ratio_std']:.2f}× disparity is deconstructed by OECD precarity control (Panels F & I: {rr_lo:.2f}×–{rr_hi:.2f}×) and reporting bias."
 
     colors = ["#d9534f", "#e67e22", "#f39c12", "#27ae60", "#1f4e78"]
@@ -1122,11 +1230,11 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
     fit_nde_res = m["age_crime_func"](dense_ages, *m["popt_nde_res"])
     fit_nde_res_youth = m["age_crime_func"](dense_ages_youth, *m["popt_nde_res"])
 
-    # OECD Precarity Control parameters (calibrated in Panel F)
+    # OECD Precarity Control parameters (calibrated in Panel F via DerSimonian-Laird REMR)
     proj = m["oecd_reg"]["german_projections"]
-    rr_ctrl_central = float(proj["y_d13_wls"])  # ~2.60 (OECD WLS Central Estimate for German D1–D3)
-    rr_proj_lo = float(proj["y_ses40_wls"])      # ~2.56 (Mikrozensus SES < 40)
-    rr_proj_hi = float(proj["y_silc_wls"])       # ~2.62 (EU-SILC at-risk-of-poverty)
+    rr_ctrl_central = float(proj.get("y_d13_re", proj.get("y_d13_wls")))       # 2.54 (OECD REMR Central Estimate for German D1–D3)
+    rr_proj_lo = float(proj.get("ci_corridor_lower", proj.get("ci_ses40_lower")))  # 2.17 (Lower bound of German 95% CI corridor)
+    rr_proj_hi = float(proj.get("ci_corridor_upper", proj.get("ci_silc_upper")))  # 2.81 (Upper bound of German 95% CI corridor)
 
     # Precarity-controlled curves restricted strictly to ages 14–30
     fit_nde_ctrl_mid = fit_nde_res_youth / rr_ctrl_central
@@ -1148,8 +1256,8 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
     ax.plot(dense_ages, fit_nde_res, label=lbl_nde_res, color="#e67e22", lw=2.2 if is_standalone else 1.8, linestyle="-.")
 
     # 4. OECD Precarity Sensitivity Band (Shaded, limited to 14–30 years)
-    lbl_band = f"OECD-Prekaritätsband (Ŷ = {rr_proj_lo:.2f}×–{rr_proj_hi:.2f}×; 14–30 J.)" if is_de else f"OECD Precarity Band (Ŷ = {rr_proj_lo:.2f}×–{rr_proj_hi:.2f}×; 14–30 Y.)"
-    ax.fill_between(dense_ages_youth, fit_nde_ctrl_lower_band, fit_nde_ctrl_upper_band, color="#27ae60", alpha=0.22, zorder=2, label=lbl_band)
+    lbl_band = f"OECD-Prekaritätsband (95%-KI: {rr_proj_lo:.2f}×–{rr_proj_hi:.2f}×; 14–30 J.)" if is_de else f"OECD Precarity Band (95% CI: {rr_proj_lo:.2f}×–{rr_proj_hi:.2f}×; 14–30 Y.)"
+    ax.fill_between(dense_ages_youth, fit_nde_ctrl_lower_band, fit_nde_ctrl_upper_band, color="#27ae60", alpha=0.30, zorder=2, label=lbl_band)
 
     # 5. Precarity-controlled Non-German Curve (limited to 14–30 years)
     lbl_ctrl = f"Nicht-Dt. residenz- & prekaritätskontrolliert ({rr_ctrl_central:.2f}×; 14–30 J.)" if is_de else f"Non-German Residence- & Precarity-Controlled ({rr_ctrl_central:.2f}×; 14–30 Y.)"
@@ -1204,10 +1312,10 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
 
     title = (
         f"(I) Alters-Kriminalitäts-Kurven mit OECD-Prekaritäts-Sensitivität (14–30 J.)\n"
-        f"[BKA PKS 2023 T40/T50 vs. OECD-WLS-Prekaritätskontrolle ({rr_proj_lo:.2f}×–{rr_proj_hi:.2f}× | Zentral: {rr_ctrl_central:.2f}×)]"
+        f"[BKA PKS 2023 T40/T50 vs. OECD-REMR-Prekaritätskontrolle ({rr_proj_lo:.2f}×–{rr_proj_hi:.2f}× | Zentral: {rr_ctrl_central:.2f}×)]"
         if is_de else
         f"(I) Age–Crime Curves with OECD Precarity Sensitivity (Ages 14–30)\n"
-        f"[BKA PKS 2023 T40/T50 vs. OECD WLS Precarity Control ({rr_proj_lo:.2f}×–{rr_proj_hi:.2f}× | Central: {rr_ctrl_central:.2f}×)]"
+        f"[BKA PKS 2023 T40/T50 vs. OECD REMR Precarity Control ({rr_proj_lo:.2f}×–{rr_proj_hi:.2f}× | Central: {rr_ctrl_central:.2f}×)]"
     )
     ax.set_title(title, fontweight="bold", fontsize=10.5 if is_standalone else 9.2)
     ax.set_xlabel("Alter in Jahren" if is_de else "Age in Years", fontsize=9.5 if is_standalone else 8.5)
@@ -1329,8 +1437,8 @@ def generate_composite_matrix_de(m):
     # Panel I: Universal Age-Crime curves: BKA Register Data (Ages 14–80)
     render_panel_i_age_crime(axes[2, 2], m, lang="de", is_standalone=False)
 
-    rr_ctrl = m.get("rr_ctrl_central", 2.60)
-    plt.figtext(0.01, 0.004, f"Survey-Metasynthese amtlicher Register (BKA PKS 2023 Schlüssel 892000, T20, T29, T40, T50; Destatis Zensus 2022) & kriminologischer Surveys (EU-SILC, Mikrozensus, OECD-Längsschnittkohorten).\nMethodischer Hinweis: Panel E ist der eigene Beitrag (Kettenregel & Fréchet-Schranken). Panel F kalibriert die Prekaritätselastizität über OECD-Studien. Panel G modelliert das Alter×SES-Risikofeld (0–80 J. mit OECD-Zentralwert {rr_ctrl:.2f}×). Panel H zeigt die amtliche BKA-Registerdekomposition, Panel I die resultierende Kurvenkonvergenz (14–30 J.).", fontsize=8.5, style="italic", ha="left")
+    rr_ctrl = m.get("rr_ctrl_central", 2.54)
+    plt.figtext(0.01, 0.004, f"Survey-Metasynthese amtlicher Register (BKA PKS 2023 Schlüssel 892000, T20, T29, T40, T50; Destatis Zensus 2022) & kriminologischer Surveys (EU-SILC, Mikrozensus, OECD-Längsschnittkohorten).\nMethodischer Hinweis: Panel E ist der eigene Beitrag (Kettenregel & Fréchet-Schranken). Panel F kalibriert die Prekaritätselastizität über OECD-REMR. Panel G modelliert das Alter×SES-Risikofeld (0–80 J. mit OECD-Zentralwert {rr_ctrl:.2f}×). Panel H zeigt die amtliche BKA-Registerdekomposition, Panel I die resultierende Kurvenkonvergenz (14–30 J.).", fontsize=8.5, style="italic", ha="left")
     plt.tight_layout(rect=[0, 0.025, 1, 0.965])
 
     p_de = os.path.join(PLOTS_DIR, "bka_kriminalitaet_3x3_deutsch.png")
@@ -1438,8 +1546,8 @@ def generate_composite_matrix_en(m):
     # Panel I: Universal Age-Crime curves: BKA Register Data (Ages 14–80)
     render_panel_i_age_crime(axes[2, 2], m, lang="en", is_standalone=False)
 
-    rr_ctrl = m.get("rr_ctrl_central", 2.60)
-    plt.figtext(0.01, 0.004, f"Survey meta-synthesis of official registers (BKA PKS Key 892000, T20, T29, T40, T50; Destatis Census 2022) & criminological surveys (EU-SILC, Microcensus, OECD Longitudinal Cohorts).\nMethodological Note: Panel E is the novel contribution (chain rule & Fréchet bounds). Panel F calibrates the precarity elasticity via OECD peer cohorts. Panel G models the Age×SES risk surface (ages 0–80 with OECD central estimate {rr_ctrl:.2f}×). Panel H displays the official BKA register decomposition, Panel I the resulting curve convergence (ages 14–30).", fontsize=8.5, style="italic", ha="left")
+    rr_ctrl = m.get("rr_ctrl_central", 2.54)
+    plt.figtext(0.01, 0.004, f"Survey meta-synthesis of official registers (BKA PKS Key 892000, T20, T29, T40, T50; Destatis Census 2022) & criminological surveys (EU-SILC, Microcensus, OECD Longitudinal Cohorts).\nMethodological Note: Panel E is the novel contribution (chain rule & Fréchet bounds). Panel F calibrates the precarity elasticity via OECD REMR. Panel G models the Age×SES risk surface (ages 0–80 with OECD central estimate {rr_ctrl:.2f}×). Panel H displays the official BKA register decomposition, Panel I the resulting curve convergence (ages 14–30).", fontsize=8.5, style="italic", ha="left")
     plt.tight_layout(rect=[0, 0.025, 1, 0.965])
 
     p_en = os.path.join(PLOTS_DIR, "bka_crime_disparity_9panel_english.png")
@@ -1573,12 +1681,12 @@ def generate_composite_matrix_v2(m, lang="de"):
     render_panel_i_age_crime(axes[2, 2], m, lang=lang, is_standalone=False)
 
     # Footnote
-    rr_ctrl = m.get("rr_ctrl_central", 2.60)
+    rr_ctrl = m.get("rr_ctrl_central", 2.54)
     if is_de:
-        plt.figtext(0.01, 0.004, f"Survey-Metasynthese amtlicher Register (BKA PKS T20, T40, T50, T29; Key 892000; Zensus 2022) & kriminologischer Surveys (EU-SILC, Mikrozensus, OECD-Längsschnittkohorten).\nMethodischer Hinweis: Panel E ist der eigene Beitrag (Kettenregel & Fréchet-Schranken). Panel F kalibriert die Prekaritätselastizität über OECD-Studien. Panel G modelliert das Alter×SES-Risikofeld (0–80 J. mit OECD-Zentralwert {rr_ctrl:.2f}×). Panel H zeigt die amtliche BKA-Registerdekomposition, Panel I schließt die Storyline mit den amtlichen Alterskurven ab (14–30 J.).", fontsize=8.5, style="italic", ha="left")
+        plt.figtext(0.01, 0.004, f"Survey-Metasynthese amtlicher Register (BKA PKS T20, T40, T50, T29; Key 892000; Zensus 2022) & kriminologischer Surveys (EU-SILC, Mikrozensus, OECD-Längsschnittkohorten).\nMethodischer Hinweis: Panel E ist der eigene Beitrag (Kettenregel & Fréchet-Schranken). Panel F kalibriert die Prekaritätselastizität über OECD-REMR. Panel G modelliert das Alter×SES-Risikofeld (0–80 J. mit OECD-Zentralwert {rr_ctrl:.2f}×). Panel H zeigt die amtliche BKA-Registerdekomposition, Panel I schließt die Storyline mit den amtlichen Alterskurven ab (14–30 J.).", fontsize=8.5, style="italic", ha="left")
         out_name = "bka_kriminalitaet_3x3_deutsch_v2.png"
     else:
-        plt.figtext(0.01, 0.004, f"Survey meta-synthesis of official registers (BKA PKS T20, T40, T50, T29; Key 892000; Census 2022) & criminological surveys (EU-SILC, Microcensus, OECD Longitudinal Cohorts).\nMethodological Note: Panel E is the novel contribution (chain rule & Fréchet bounds). Panel F calibrates the precarity elasticity via OECD peer cohorts. Panel G models the Age×SES risk surface (ages 0–80 with OECD central estimate {rr_ctrl:.2f}×). Panel H displays the official BKA register decomposition, Panel I concludes the storyline with official age curves (ages 14–30).", fontsize=8.5, style="italic", ha="left")
+        plt.figtext(0.01, 0.004, f"Survey meta-synthesis of official registers (BKA PKS T20, T40, T50, T29; Key 892000; Census 2022) & criminological surveys (EU-SILC, Microcensus, OECD Longitudinal Cohorts).\nMethodological Note: Panel E is the novel contribution (chain rule & Fréchet bounds). Panel F calibrates the precarity elasticity via OECD REMR. Panel G models the Age×SES risk surface (ages 0–80 with OECD central estimate {rr_ctrl:.2f}×). Panel H displays the official BKA register decomposition, Panel I concludes the storyline with official age curves (ages 14–30).", fontsize=8.5, style="italic", ha="left")
         out_name = "bka_crime_disparity_9panel_english_v2.png"
 
     plt.tight_layout(rect=[0, 0.025, 1, 0.965])

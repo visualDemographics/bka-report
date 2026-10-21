@@ -70,7 +70,7 @@ A common flaw in crime disparity research is conflating exogenous confounders wi
 Because the PKS records no individual socioeconomic or darkfield data, scientific integrity requires maintaining a strict separation between register counts and survey findings:
 1. **Target Population Divergence**: KFN FB 107 (nationwide representative survey of 9th-grade students across 61 districts, ages 14–16, $N = 44,610$) tracks self-reported delinquency, whereas the PKS counts registered suspects across all ages (78.5% adults). Adolescent survey Odds Ratios are not extrapolated across adult men up to 80 years old as hard register deductions.
 2. **Construct Divergence (*Migration Background* vs. *Citizenship*)**: Academic surveys typically operationalize sociological *migration background* (including German-born 2nd and 3rd generations), whereas the PKS classifies strictly by *formal citizenship* at the time of the offense. Moreover, asylum seekers residing in collective reception centers are underrepresented in school-based surveys.
-3. **Register-Based Accounting in Panel G & Waterfall (`plots/decomposition_waterfall.png`)**:
+3. **Register-Based Accounting in Panel H & Waterfall (`plots/decomposition_waterfall.png`)**:
    - Evaluates the national population decomposition for **males aged 14+** across 3 empirical register stages:
      - Stage 1: Raw PKS Suspect Rate: **1,203.4** per 100k ($4.34\times$ vs. German raw 277.5).
      - Stage 2: Residence Adjustment (BKA T29 Tier 3: $-13.9\%$ non-residents / no fixed abode): **1,036.4** per 100k ($3.74\times$).
