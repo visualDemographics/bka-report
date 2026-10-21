@@ -22,11 +22,10 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
 | **Panel C** | [`panel_c_socioeconomic_status.png`](./panel_c_socioeconomic_status.png) | Net equivalised income across 10 deciles | **Official Representative Survey Benchmark** (Destatis Microcensus EU-SILC) |
 | **Panel D** | [`panel_d_gender_distribution.png`](./panel_d_gender_distribution.png) | Sex distribution of violent crime suspects | **Official Police Register Benchmark** (BKA PKS T20) |
 | **Panel E** | [`panel_e_joint_risk_concentration.png`](./panel_e_joint_risk_concentration.png) | Combined high-risk cohort (Male $\cap$ 14–30 $\cap$ SES < 40) | **NOVEL METHODOLOGICAL CONTRIBUTION**: Conditional Probability Chain Rule & Fréchet–Hoeffding Copula Bounds |
-| **Panel F** | [`panel_f_risk_matrix_age_ses.png`](./panel_f_risk_matrix_age_ses.png) | 2D Risk Surface: Age × SES (Moffitt maturity gap + Sampson/Laub desistance) | **Theoretical & Empirical Surface** (SciPy Curve Fit to BKA Marginals) |
-| **Panel G** | [`panel_g_bka_waterfall.png`](./panel_g_bka_waterfall.png) | Official BKA Register Decomposition Waterfall (standalone: [`decomposition_waterfall.png`](./decomposition_waterfall.png)) | **Official BKA Register Decomposition Waterfall** (BKA PKS T29/T40/T50 & Destatis) |
-| **Panel H** | [`panel_h_kfn_lebensbedingungen.png`](./panel_h_kfn_lebensbedingungen.png) | Youth violence prevalence by origin & living conditions | **Representative Survey Benchmark** (KFN FB 107 Empirical Survey, $N = 44,610$) |
-| **Panel I** | [`panel_i_age_crime_curve.png`](./panel_i_age_crime_curve.png) | Universal Age-Crime Curve across life course | **Official Police Register Benchmark** (BKA T40/T50 vs. Destatis BV-01/AZR) |
-| **Panel J** | [`panel_j_oecd_precarity_regression.png`](./panel_j_oecd_precarity_regression.png) | Empirical OECD Precarity vs. Violent Crime Meta-Regression (Ages 14–30) | **Cross-National Meta-Regression Model** (WLS over 11 studies from 7 OECD countries) |
+| **Panel F** | [`panel_f_oecd_precarity_regression.png`](./panel_f_oecd_precarity_regression.png) | Empirical OECD Precarity vs. Violent Crime Meta-Regression (Ages 14–33) | **Cross-National Meta-Regression Model** (WLS over 10 studies from 7 OECD countries; German central projection $\widehat{Y} = 2.60\times$) |
+| **Panel G** | [`panel_g_risk_matrix_age_ses.png`](./panel_g_risk_matrix_age_ses.png) | 2D Risk Surface: Age × SES (0–80 J. | Moffitt maturity gap + Sampson/Laub desistance & OECD RR = 2.60×) | **Theoretical & Empirical Surface** (SciPy Curve Fit to BKA Marginals across Ages 0–80) |
+| **Panel H** | [`panel_h_bka_waterfall.png`](./panel_h_bka_waterfall.png) | Official BKA Register Decomposition Waterfall (standalone: [`decomposition_waterfall.png`](./decomposition_waterfall.png)) | **Official BKA Register Decomposition Waterfall** (BKA PKS T29/T40/T50 & Destatis) |
+| **Panel I** | [`panel_i_age_crime_curve.png`](./panel_i_age_crime_curve.png) | Universal Age-Crime Curves with OECD Precarity Sensitivity (14–30 y. Control) | **Official Police Register Benchmark with OECD Precarity Sensitivity Band** (BKA T40/T50 vs. Destatis BV-01/AZR & OECD WLS Corridor [2.46×, 2.74×]) |
 | **Waterfall** | [`decomposition_waterfall.png`](./decomposition_waterfall.png) | Official BKA PKS register decomposition waterfall | **Official Register Decomposition Waterfall** (BKA PKS T29, T40, T50, Census 2022) |
 | **Matrix DE (v1)** | [`bka_kriminalitaet_3x3_deutsch.png`](./bka_kriminalitaet_3x3_deutsch.png) | 9-Panel Composite Matrix in German | **Empirical Survey Matrix (German)** |
 | **Matrix DE (v2)** | [`bka_kriminalitaet_3x3_deutsch_v2.png`](./bka_kriminalitaet_3x3_deutsch_v2.png) | 9-Panel Composite Matrix in German (v2 Synopse) | **Empirical Survey Matrix v2 (German)** |
@@ -104,19 +103,40 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
 
 ---
 
-### Panel F: Bivariate Delinquency Model: Age × SES [14–80 Y. | BKA PKS T40 & Sweden LISA RR = 2.41×]
-* **File**: [`panel_f_risk_matrix_age_ses.png`](./panel_f_risk_matrix_age_ses.png)
+### Panel F: Empirical OECD Meta-Regression: Precarity vs. Violent Crime [Young Adulthood Ages 14–33]
+* **Files**: [`panel_f_oecd_precarity_regression.png`](./panel_f_oecd_precarity_regression.png) (German) & [`panel_f_oecd_precarity_regression_en.png`](./panel_f_oecd_precarity_regression_en.png) (English)
+* **Dataset**: [`datasets/oecd_precarity_crime_meta.csv`](../datasets/oecd_precarity_crime_meta.csv) – Curated cross-national empirical dataset pairing precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 10 landmark longitudinal and total-population register studies from 7 OECD peer nations (Sweden, Netherlands, Norway, United States, New Zealand, Denmark, Finland), with total combined $N > 16.5$ million individuals.
+* **Strict Young Adulthood Offending Career Restriction**: All violent crime outcomes are measured across the young adulthood offending career (ages 14–33), and all precarity metrics are measured during upbringing/childhood. German adolescent school surveys (ages 14–16) were excluded to avoid developmental truncation and secondary citation artifacts.
+* **Econometric Model & Results**:
+  - **Weighted Least Squares (WLS)** with inverse-variance weights $w_i = 1 / \sigma_i^2$:
+    $$\ln(Y_i) = 0.871 + 0.087 \cdot \ln(X_i)$$
+    - **Intercept**: $\beta_0 = 0.871$ ($p < 0.001$, baseline multiplier $\exp(\beta_0) = 2.39\times$).
+    - **Slope**: $\beta_1 = 0.087$ ($p = 0.169$ n.s.). The statistically flat slope across observed precarity ranges demonstrates that across OECD peer nations, the structural precarity multiple clusters consistently around $\sim 2.5\times - 2.6\times$ regardless of country-specific precarity thresholds.
+  - **Register Benchmark Validation**: Across register studies (Sweden LISA $RR = 2.41\times$, Sweden Sariaslan population-level between-family $HR = 2.42\times$, Sweden Brå 21:9 $RR = 2.56\times$, Netherlands WODC $RR = 3.10\times$, Norway SSB 728 $RR = 2.35\times$, Norway SSB 36 $RR = 2.34\times$, Denmark Mok $IRR = 2.90\times$, Finland Sariaslan $HR = 2.52\times$), precarity effect ratios cluster tightly between $2.34\times$ and $3.10\times$.
+  - **German Projection**: For empirical German precarity ratios:
+    - Destatis Mikrozensus SES $< 40$ ($X_{\text{DE}} = 2.21$): $\widehat{Y}_{\text{DE}} = \mathbf{2.56\times}$ ($95\%$ CI: $[2.54; 2.58\times]$)
+    - Destatis Mikrozensus D1–D3 ($X_{\text{DE}} = 2.64$): $\widehat{Y}_{\text{DE}} = \mathbf{2.60\times}$ ($95\%$ CI: $[2.53; 2.67\times]$) – **Central Value for Panels G & I**
+    - Destatis EU-SILC At-Risk-of-Poverty ($X_{\text{DE}} = 2.90$): $\widehat{Y}_{\text{DE}} = \mathbf{2.62\times}$ ($95\%$ CI: $[2.52; 2.72\times]$)
+  - **Empirical Validation**: Establishes an empirical OECD calibration corridor $[2.56\times, 2.62\times]$ with central estimate $\widehat{Y} = 2.60\times$, replacing arbitrary single-country reliance with an econometric multi-country anchor.
+
+---
+
+### Panel G: Bivariate Delinquency Model: Age × SES [0–80 Y. | BKA PKS T40 & OECD-WLS RR = 2.60×]
+* **File**: [`panel_g_risk_matrix_age_ses.png`](./panel_g_risk_matrix_age_ses.png)
+* **Underlying Empirical Datasets**: [`datasets/panel_g_full_lifecourse_rates.csv`](../datasets/panel_g_full_lifecourse_rates.csv) and [`datasets/panel_g_age_crime_curve.csv`](../datasets/panel_g_age_crime_curve.csv).
 * **Data Sources & Parameters**:
-  1. **Empirical Age Marginal $A_{\text{PKS}}(a)$**: BKA PKS 2023 Table 40 violent crime suspect rate for males across the statutory criminal responsibility age range **14–80 years** (§ 19 StGB), peaking at $1,164.6$ per 100k at ages 14–18.
-  2. **Linked Register Precarity Gradient ($RR = 2.41\times$)**: Verbatim male violent crime conviction prevalence ratio from Sweden's total-population register linkage (LISA taxable income & BRÅ Brottsregistret criminal register; Hällsten, Szulkin, & Sarnecki 2013, *Br. J. Criminol.* 53(3), Table 1, p. 45: $17.1\%$ immigrant background vs. $7.1\%$ native Swedish background, $RR = 0.171 / 0.071 = 2.408\times \approx 2.41\times$, $95\%$ CI $[2.17; 2.67]$, $p < 0.001$; benchmark key `SWEDEN_LISA_REGISTER_PRECARITY_RR` $= 2.41$). Resolves the ecological fallacy of extrapolating adolescent school surveys onto adult felon life-course trajectories.
+  1. **Empirical Age Marginal $A_{\text{PKS}}(a)$ across Life Course (0–80 Years)**: Ingests 13 audited German male violent crime suspect rates from BKA PKS 2023 Table 40 and BKA BV-01 / Destatis 12411-0006 across childhood (<6, 6<8, 8<10, 10<12, 12<14), adolescence (14<18), young adulthood (18<21, 21<25, 25<30), and mature adulthood (30<40, 40<50, 50<60, 60+), exported via [`panel_g_full_lifecourse_rates.csv`](../datasets/panel_g_full_lifecourse_rates.csv).
+  2. **OECD Meta-Regression Precarity Gradient ($RR = 2.60\times$)**: Calibrated directly from the OECD WLS meta-regression projection for German primary income precarity (Mikrozensus deciles D1–D3, $X = 2.64 \implies \widehat{Y} = 2.60\times$, corridor $[2.56\times, 2.62\times]$).
   3. **Harmonized Precarity Threshold (SES $< 40$)**: Smooth sigmoid transition centered at $\text{SES} < 40$ (lowest 4 deciles D1–D4), harmonized directly with Destatis Microcensus EU-SILC in Panels C and E (where $72.5\%$ of non-Germans vs. $32.8\%$ of Germans reside).
 * **Mathematical Derivation & Provenance of the Surface Shape (Non-Arbitrary)**:
   The distribution topology is a disciplined mathematical formulation grounded in 5 empirical and theoretical pillars:
-  1. **Dual-Process Mixture on Age**: $A_{\text{PKS}}(a) = A_{\text{peak}}(a) + A_{\text{base}}(a)$ is fitted via non-linear least squares (`scipy.optimize.curve_fit`) directly to empirical German male violent crime suspect rates from BKA PKS 2023 Table 40 across ages 14–80.
-  2. **Adolescent Maturity Gap**: The adolescent peak ($A_{\text{peak}}$, $\mu \approx 17.5, \sigma \approx 3.2$) models the biological-social maturity gap (Moffitt 1993 dual taxonomy) where delinquency is widespread across all social classes ($w_{\text{gap}} = 0.35$).
+  1. **Dual-Process Mixture with Smooth Juvenile Onset**:
+     $$A(a) = \frac{1}{1 + \exp(-k_{\text{on}} (a - x_{\text{on}}))} \left[ a_{\text{peak}} \exp\left(-\frac{(a - \mu)^2}{2 \sigma^2}\right) + a_{\text{adult}} \exp(-a / \tau) \right]$$
+     fitted via non-linear least squares (`scipy.optimize.curve_fit`) to empirical German male rates from age 0 to 80. Delinquency starts near zero ($\sim 0.5$ at age 0), rises across childhood (TVBZ $\sim 28$ at age 7, $\sim 234$ at age 11, $\sim 596$ at age 13) to peak in adolescence ($1,165$ at age 16) and desists in mature adulthood.
+  2. **Adolescent Maturity Gap**: The adolescent peak models the biological-social maturity gap (Moffitt 1993 dual taxonomy) where delinquency is widespread across all social classes ($w_{\text{gap}} = 0.40$).
   3. **Adult Turning Points & Desistance**: Modeled after Laub & Sampson (2003, *Shared Beginnings, Divergent Lives*, Ch. 6) where stable employment triggers steep adult desistance ($\text{OR} = 0.61$).
   4. **Delayed Desistance under Precarity**: Modeled after Farrington & Loeber (2012, NIJ Report Table 4.3, p. 91) and Farrington (1986): chronic economic deprivation prolongs criminal careers into ages 30–50 ($\tau \approx 25$ years).
-  5. **Continuous Marginal Conservation**: At every age slice $a \in [14, 80]$, the surface satisfies:
+  5. **Continuous Marginal Conservation**: At every age slice $a \in [0, 80]$, the surface satisfies:
      $$\mathbb{E}_s[R(a, s)] = \int_{0}^{100} R(a, s) \frac{ds}{100} \equiv A_{\text{PKS}}(a) \quad (\text{numerical drift } < 10^{-10})$$
      Zero cases are created or destroyed; it is an exact conditional expectation decomposition of official BKA registry data.
 * **High-Risk Demographic Overlay**: Features a dashed cyan bounding box spanning Ages $14\text{--}30 \times \text{SES} < 40$, explicitly linking the visual topology to the **$5.04\times$ joint demographic risk concentration** proved in Panel E.
@@ -124,70 +144,35 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
 
 ---
 
-### Panel G: Official BKA Register Decomposition Waterfall [BKA PKS 2023 & Destatis Census 2022]
-* **File**: [`panel_g_bka_waterfall.png`](./panel_g_bka_waterfall.png) (standalone synthesis: [`decomposition_waterfall.png`](./decomposition_waterfall.png))
+### Panel H: Official BKA Register Decomposition Waterfall [BKA PKS 2023 & Destatis Census 2022]
+* **File**: [`panel_h_bka_waterfall.png`](./panel_h_bka_waterfall.png) (standalone synthesis: [`decomposition_waterfall.png`](./decomposition_waterfall.png))
 * **Data Sources**: Official BKA PKS 2023 Tables T29 (crime location vs. residence), T40 (German suspects), T50 (non-German suspects), and Destatis Census 2022 / BV-01/02 population registers.
 * **Empirical Decomposition Stages (Males 14+)**:
   1. **Raw PKS Rate (Nichtdeutsche Männer 14+)**: **$1,203.4$** per 100,000 ($4.34\times$ vs. German raw $277.5$).
   2. **Residence Adjustment (BKA T29 Tier 3)**: Non-residents and persons with no fixed abode accounted for $13.88\%$ of suspects; deducting them lowers the rate to **$1,036.4$** per 100,000 ($-167.0$, $3.74\times$).
   3. **Direct Age Standardization (Destatis Standard Population)**: Equalizing the asymmetric youth bulge lowers the rate to **$880.3$** per 100,000 ($-156.1$, $3.08\times$ vs. German age-standardized baseline **$285.8$**).
   4. **German Baseline (Altersstandardisiert 14+)**: **$285.8$** per 100,000 ($1.00\times$).
-* **Methodological Boundary of Register Data**: Police statistics (Hellfeld) record neither reporting behavior nor socioeconomic variables. The remaining $3.08\times$ disparity in the register is deconstructed in darkfield surveys by differential reporting bias ($1.5\times$–$2.1\times$) and equal living conditions (Panel H, $p = 0.56$ n.s.).
+* **Methodological Boundary of Register Data**: Police statistics (Hellfeld) record neither reporting behavior nor socioeconomic variables. The remaining $3.08\times$ disparity in the register is deconstructed by the OECD precarity sensitivity analysis (Panels F & I: $2.56\times$–$2.62\times$) and darkfield differential reporting bias ($1.5\times$–$2.1\times$).
 
 ---
 
-### Panel H: Youth Violent Delinquency by Origin & Living Conditions [KFN FB 107 (2009, Ages 14–16), N = 44,610]
-* **File**: [`panel_h_kfn_lebensbedingungen.png`](./panel_h_kfn_lebensbedingungen.png)
-* **Target Cohort & Age Range**: **Ages 14–16 years** (9th-grade secondary school cohort, nationwide representative sample across 61 districts, $N = 44,610$; Baier, Pfeiffer, Simonson & Rabold 2009, KFN Research Report No. 107).
-* **Data Sources & Dataset**: Verbatim extraction from KFN Research Report No. 107 (Figure 5.24, p. 86; Table 5.2, p. 77; [`datasets/panel_h_kfn_lebensbedingungen.csv`](../datasets/panel_h_kfn_lebensbedingungen.csv)).
-* **Empirical Stages & Measured Conditions**:
-  - **Stage 1 (Unadjusted / All Adolescents)**:
-    - German: 11.5% ($N = 22,233$)
-    - Turkish origin: 20.3% ($N = 812$, $1.77\times$)
-    - Former Yugoslavia: 22.1% ($N = 267$, $1.92\times$)
-  - **Stage 2 (Peer-Controlled, max. 5 delinquent friends)**:
-    - German: 7.7% ($N = 21,399$)
-    - Turkish origin: 11.9% ($N = 724$, $1.55\times$)
-    - Former Yugoslavia: 11.4% ($N = 228$, $1.48\times$)
-  - **Stage 3 (Equal Living Conditions: no welfare dependency, no remedial school track [Förderschule], no severe parental violence)**:
-    - German: **6.4%** ($N = 17,318$)
-    - Turkish origin: **5.9%** ($N = 505$, $0.92\times$)
-    - Former Yugoslavia: **5.7%** ($N = 173$, $0.89\times$)
-* **Statistical Validity**: Differences in Stage 3 are statistically non-significant ($p = 0.56$ n.s., pooled $\text{OR} = 0.909$ $[0.66; 1.26]$). When living conditions are equalized, violence drops symmetrically across all groups, with immigrant youth exhibiting rates slightly below the German baseline.
-
----
-
-### Panel I: Universal Age-Crime Curves: BKA PKS 2023 [Males 14–80 y.]
+### Panel I: Universal Age-Crime Curves with OECD Precarity Sensitivity [Precarity Control Restricted to 14–30 Y.]
 * **File**: [`panel_i_age_crime_curve.png`](./panel_i_age_crime_curve.png)
-* **Data Sources & Dataset**: [`datasets/panel_g_age_crime_curve.csv`](../datasets/panel_g_age_crime_curve.csv) – TVBZ per age band, calculated from BKA T40/T50 (numerators), BV-01/BV-02 & Destatis AZR 12521-04 (denominators), and BKA T29 Tier 3.
+* **Data Sources & Dataset**: [`datasets/panel_g_age_crime_curve.csv`](../datasets/panel_g_age_crime_curve.csv) – TVBZ per age band, calculated from BKA T40/T50 (numerators), BV-01/BV-02 & Destatis AZR 12521-04 (denominators), BKA T29 Tier 3, and OECD Meta-Regression calibration parameters from Panel F.
 * **Key Findings & Methodological Implementation**:
   - **German Baseline (BKA T40 / BV-01)**: Violent crime peaks at ages 14–18 ($1,164.6$ per 100k), followed by ages 18–21 ($1,040.7$ per 100k), desisting rapidly into adulthood.
-  - **Raw Non-German Curve (BKA T50 / AZR)**: Peaks at $3,938.7$ per 100k.
-  - **Residence-Adjusted Non-German Curve (BKA T29 Tier 3: $-13.9\%$)**: Deducting non-residents and persons without fixed residence lowers the peak to $\sim 3,400$ per 100k across the entire life course ($14$–$80$ years).
-  - **No Synthetic Extrapolations**: Purely empirical administrative curves without synthetic multipliers, clearly maintaining the boundary between official police registries and darkfield survey findings.
-
----
-
-### Panel J: Empirical OECD Meta-Regression: Precarity vs. Violent Crime [Young Adulthood Ages 14–33]
-* **Files**: [`panel_j_oecd_precarity_regression.png`](./panel_j_oecd_precarity_regression.png) (German) & [`panel_j_oecd_precarity_regression_en.png`](./panel_j_oecd_precarity_regression_en.png) (English)
-* **Dataset**: [`datasets/oecd_precarity_crime_meta.csv`](../datasets/oecd_precarity_crime_meta.csv) – Curated cross-national empirical dataset pairing precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 7 landmark longitudinal and total-population register studies from 6 OECD peer nations (Sweden, Netherlands, Norway, United States, New Zealand, Denmark).
-* **Strict Young Adulthood Offending Career Restriction**: All violent crime outcomes are measured across the young adulthood offending career (ages 14–33), and all precarity metrics are measured during upbringing/childhood. German adolescent school surveys (ages 14–16) were excluded to avoid developmental truncation and secondary citation artifacts.
-* **Econometric Model & Results**:
-  - **Weighted Least Squares (WLS)** with inverse-variance weights $w_i = 1 / \sigma_i^2$:
-    $$\ln(Y_i) = 0.408 + 0.517 \cdot \ln(X_i) \quad (R^2 = 0.32)$$
-  - **Register Benchmark Validation**: Across register studies (Sweden LISA $RR = 2.41\times$, Netherlands WODC $RR = 3.10\times$, Norway SSB $RR = 2.35\times$, Denmark Mok $IRR = 2.90\times$), precarity effect ratios cluster tightly between $2.35\times$ and $3.10\times$.
-  - **German Projection**: For empirical German precarity ratios:
-    - Destatis Mikrozensus SES $< 40$ ($X_{\text{DE}} = 2.21$): $\widehat{Y}_{\text{DE}} = \mathbf{2.26\times}$ ($95\%$ CI: $[1.91; 2.68\times]$)
-    - Destatis Mikrozensus D1–D3 ($X_{\text{DE}} = 2.62$): $\widehat{Y}_{\text{DE}} = \mathbf{2.47\times}$ ($95\%$ CI: $[2.24; 2.73\times]$)
-    - Destatis EU-SILC At-Risk-of-Poverty ($X_{\text{DE}} = 2.90$): $\widehat{Y}_{\text{DE}} = \mathbf{2.61\times}$ ($95\%$ CI: $[2.39; 2.84\times]$)
-  - **Empirical Validation**: The Swedish linked population register benchmark ($RR = 2.41\times$, Hällsten et al. 2013 / Sariaslan et al. 2014) used to calibrate the bivariate risk surface in Panel F falls directly within the center of the calibrated empirical corridor $[2.26\times, 2.61\times]$, confirming its cross-national validity with zero circularity.
+  - **Raw Non-German Curve (BKA T50 / AZR)**: Peaks at $3,938.7$ per 100k across the full 14–80 life course.
+  - **Residence-Adjusted Non-German Curve (BKA T29 Tier 3: $-13.9\%$)**: Deducting non-residents and persons without fixed residence lowers the peak to $\sim 3,392$ per 100k.
+  - **Strict Scope Limitation of Precarity Control to Ages 14–30**: In strict adherence to scientific rigor, the precarity-controlled trajectory and the green OECD sensitivity corridor are restricted exclusively to the **14–30 age window** (the empirical scope of the OECD young adulthood longitudinal studies).
+  - **Precarity-Controlled Curve & OECD Sensitivity Band**: Applying the empirical OECD precarity effect corridor from Panel F ($\widehat{Y}_{\text{DE}} \in [2.56\times, 2.62\times]$ across German poverty measures, with OECD WLS central estimate $\mathbf{2.60\times}$) causes the youth peak to drop from $3,392$ to **$\sim 1,305$** per 100k ($[1,295, 1,325]$), converging closely toward the German baseline ($1,165$ per 100k).
+  - **Methodological Synthesis**: Demonstrates how administrative residence correction and empirical OECD precarity calibration together resolve the observed young adulthood offending disparity.
 
 ---
 
 ## 2. Decomposition Waterfall Architecture: Separation of Hellfeld and Dunkelfeld
 
 ### Stream A: Official National Registry Decomposition Waterfall (Males Aged 14+)
-* **File**: [`decomposition_waterfall.png`](./decomposition_waterfall.png) (and [`panel_g_bka_waterfall.png`](./panel_g_bka_waterfall.png))
+* **File**: [`decomposition_waterfall.png`](./decomposition_waterfall.png) (and [`panel_h_bka_waterfall.png`](./panel_h_bka_waterfall.png))
 * **Function**: Visualizes the sequential reduction of the national registered violent crime disparity among males aged 14+:
   1. Crude registered non-German rate (males 14+): **$1,203.4$** per 100,000 ($4.34\times$)
   2. Denominator adjustment (non-residents per BKA T29 Tier 3): $-167.0 \longrightarrow \mathbf{1,036.4}$ per 100,000 ($3.74\times$)

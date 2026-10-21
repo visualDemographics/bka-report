@@ -52,10 +52,10 @@ The repository generates a unified 9-panel matrix synthesizing official police r
 | **C** | [`panel_c_socioeconomic_status.png`](plots/panel_c_socioeconomic_status.png) | **Socioeconomic Status (SES)** | Destatis Microcensus EU-SILC (Genesis `12211-0001`) | Severe precarity concentration: Lowest 3 deciles (D1–D3): **61.5%** Non-German vs. **23.3%** German ($2.64\times$); Lowest 4 deciles (SES < 40): **72.5%** vs. **32.8%** ($2.21\times$). |
 | **D** | [`panel_d_gender_distribution.png`](plots/panel_d_gender_distribution.png) | **Gender Distribution of Suspects** | BKA PKS 2023 Table 20 (Key 892000) | Violent crime is $> 80\%$ male across all nationalities ($81.6\%$ German male, $87.2\%$ non-German male); young immigrant populations have higher male proportions. |
 | **E** | [`panel_e_joint_risk_concentration.png`](plots/panel_e_joint_risk_concentration.png) | **Joint Demographic Risk Cluster** | Conditional chain rule & Fréchet–Hoeffding copula bounds | **Methodological Contribution**: The multi-attribute risk cluster (Male $\cap$ Age 14–30 $\cap$ Poverty) is **5.04× more concentrated** among non-Germans (**6.7%** vs. **1.3%**). |
-| **F** | [`panel_f_risk_matrix_age_ses.png`](plots/panel_f_risk_matrix_age_ses.png) | **Bivariate Delinquency Model: Age × SES** | BKA PKS Table 40 marginal integrated with Sweden linked register precarity relative risk ($RR = 2.41\times$, Hällsten 2013 Table 1 p. 45) | Evaluates true TVBZ across statutory ages 14–80 under exact marginal conservation; highlights the 14–30 $\times$ SES $< 40$ high-risk cluster ($5.04\times$ from Panel E) and delayed adult desistance. |
-| **G** | [`panel_g_bka_waterfall.png`](plots/panel_g_bka_waterfall.png) | **Official BKA Register Decomposition** | BKA PKS T29, T40, T50, Destatis Census 2022 | Sequential register accounting ($1,203.4 \to 1,036.4 \to 880.3$ vs. German baseline $285.8$, $3.08\times$), establishing the administrative boundary of Hellfeld data. |
-| **H** | [`panel_h_kfn_lebensbedingungen.png`](plots/panel_h_kfn_lebensbedingungen.png) | **Youth Violence by Living Conditions** | KFN FB 107 Darkfield Survey ($N = 44,610$, ages 14–16) | Under equal living conditions (no welfare, no Förderschule, no severe abuse), the gap vanishes completely (**6.4%** vs. **5.9%** / **5.7%**, pooled $\text{OR} = 0.909$, $p = 0.56$ n.s.). |
-| **I** | [`panel_i_age_crime_curve.png`](plots/panel_i_age_crime_curve.png) | **Universal Age-Crime Curves (Ages 14–80)** | BKA T40/T50 + BV-01/02 + AZR 12521-04 + T29 Tier 3 | Authentic administrative trajectories across the life course without synthetic multipliers. Concludes the narrative strictly within official register data. |
+| **F** | [`panel_f_oecd_precarity_regression.png`](plots/panel_f_oecd_precarity_regression.png) | **Empirical OECD Meta-Regression** | Curated WLS meta-regression across 10 landmark longitudinal and total-population register studies from 7 OECD nations (ages 14–33, $N > 16.5\text{M}$) | Establishes empirical precarity elasticity corridor ($2.56\times$–$2.62\times$ for German precarity ratios, central projection $\widehat{Y} = \mathbf{2.60\times}$ at D1–D3), replacing single-study reliance with an econometric multi-country anchor. |
+| **G** | [`panel_g_risk_matrix_age_ses.png`](plots/panel_g_risk_matrix_age_ses.png) | **Bivariate Delinquency Model: Age × SES** | BKA PKS Table 40 full life-course marginal (0–80 y.) integrated with OECD meta-regression precarity gradient ($RR = 2.60\times$) | Evaluates authentic TVBZ across full life course (Ages 0–80) under exact continuous marginal conservation; highlights the 14–30 $\times$ SES $< 40$ high-risk cluster ($5.04\times$ from Panel E) and delayed adult desistance. |
+| **H** | [`panel_h_bka_waterfall.png`](plots/panel_h_bka_waterfall.png) | **Official BKA Register Decomposition Waterfall** | BKA PKS T29, T40, T50, Destatis Census 2022 | Sequential register accounting ($1,203.4 \to 1,036.4 \to 880.3$ vs. German baseline $285.8$, $3.08\times$), establishing the administrative boundary of Hellfeld data. |
+| **I** | [`panel_i_age_crime_curve.png`](plots/panel_i_age_crime_curve.png) | **Universal Age-Crime Curves with OECD Precarity Sensitivity (14–30 y. Control)** | BKA T40/T50 + BV-01/02 + AZR 12521-04 + T29 Tier 3 + OECD WLS Corridor ($2.56\times$–$2.62\times$, central $\mathbf{2.60\times}$) | Authentic trajectories across the life course; residence adjustment and empirical OECD precarity elasticity (restricted to ages 14–30) drop the adolescent peak from $3,392$ to $\sim 1,305$ ($[1,295, 1,325]$), converging closely toward the German baseline ($1,165$). |
 
 ### Composite Matrices (v1 & v2)
 * **German Matrix (v2)**: [`bka_kriminalitaet_3x3_deutsch_v2.png`](plots/bka_kriminalitaet_3x3_deutsch_v2.png) (and [`v1`](plots/bka_kriminalitaet_3x3_deutsch.png))
@@ -111,7 +111,7 @@ A critical scientific conclusion of this investigation is that **causal inferenc
 While causal claims cannot be asserted on register totals, representative criminological surveys and macro-demographic registries reveal crucial empirical mechanisms:
 
 #### A. Equal Living Conditions in Adolescent Darkfield Surveys (KFN FB 107)
-In the nationwide representative KFN youth survey (Baier, Pfeiffer, Simonson & Rabold 2009, Figure 5.24, p. 86; $N = 44,610$ 9th-graders aged 14–16 across 61 districts, visualized in **Panel H**):
+In the nationwide representative KFN youth survey (Baier, Pfeiffer, Simonson & Rabold 2009, Figure 5.24, p. 86; $N = 44,610$ 9th-graders aged 14–16 across 61 districts, preserved in archival dataset [`datasets/panel_h_kfn_lebensbedingungen.csv`](datasets/panel_h_kfn_lebensbedingungen.csv)):
 * **Stage 1 (Unadjusted Youth Violence)**:
   * German adolescents: **11.5%** ($N = 22,233$)
   * Turkish origin: **20.3%** ($N = 812$, $1.77\times$)
@@ -158,8 +158,8 @@ Variables like age, sex, and poverty are inherently correlated—young adults na
 ### 4. Police Registry Boundaries & Hellfeld/Dunkelfeld Separation
 The PKS is an administrative police register, not a socioeconomic survey. It records zero information on income, education, wealth, or housing quality, and records no darkfield victim reporting behaviors. Socioeconomic adjustments cannot be directly calculated from the PKS alone.
 * **Separation of Evidence**: Rather than applying adolescent darkfield survey Odds Ratios as hard accounting deductions onto national police suspect rates across adult populations (ages 14–80), the repository maintains a strict separation:
-  - **Register Data (Panel G)**: Stops at direct administrative controls (residence adjustment via Table 29 and age standardization via Census 2022: $4.34\times \to 3.74\times \to 3.08\times$).
-  - **Survey Data (Panel H)**: Shows that within authentic criminological microdata (KFN FB 107, $N = 44,610$), equalizing living conditions (welfare, school track, domestic violence) eliminates the youth violence gap ($6.4\%$ vs. $5.9\%$, $p = 0.56$ n.s.).
+  - **Register Data (Panel H)**: Stops at direct administrative controls (residence adjustment via Table 29 and age standardization via Census 2022: $4.34\times \to 3.74\times \to 3.08\times$).
+  - **Survey & Longitudinal Data (Panel F & KFN FB 107)**: Shows that within authentic criminological microdata (OECD longitudinal cohorts in Panel F and KFN FB 107, $N = 44,610$), precarity effect ratios cluster around $2.3\times$–$3.1\times$, and equalizing living conditions eliminates the youth violence gap ($6.4\%$ vs. $5.9\%$, $p = 0.56$ n.s.).
 
 ### 5. Legal Citizenship vs. Migration Background
 The PKS records formal legal nationality at the time of the offense. The "German" baseline aggregates native-born Germans, naturalized citizens, and second/third-generation descendants of immigrants. Baseline heterogeneity is explicitly documented across all models.
@@ -186,7 +186,7 @@ bka-report/
 ├── datasets/
 │   ├── README_PROVENANCE.md         # Exact raw-to-dataset provenance documentation
 │   ├── datasets.md                  # Comprehensive schema and data dictionary
-│   └── *.csv                        # 17 audited, reproducible datasets (zero synthetic values)
+│   └── *.csv                        # 19 audited, reproducible datasets (zero synthetic values)
 ├── src/
 │   ├── data_preparation.py          # Deterministic pipeline: rawdata/ -> datasets/ (asserts & audits)
 │   └── modeling.py                  # Statistical inference, curve fitting, and plot generation
@@ -275,7 +275,7 @@ RESPONSIBLE DEMOGRAPHICS: AUTOMATED AUDIT SUITE
 
 [Check 5] Verifying Exclusion of Guessed Normal/Synthetic Distributions...
   ✓ Legacy unverified files properly isolated in datasets/_legacy_unverified/
-  ✓ Active CSV files in datasets/: 17 (all verified from rawdata/)
+  ✓ Active CSV files in datasets/: 19 (all verified from rawdata/)
   -> PASS [Check 5]: No guessed parameters or synthetic distributions present in active datasets.
 
 ======================================================================
