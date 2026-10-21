@@ -42,8 +42,9 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
 * **Computed Values**: 
   - German suspects: $111,517$ / $73.15$ million residents $\longrightarrow$ **$152.4$ per 100,000**.
   - Non-German suspects: $79,088$ / $13.54$ million residents $\longrightarrow$ **$584.1$ per 100,000**.
-  - Crude Disparity: **$3.83\times$** (rising to $4.08\times$ under Census 2022 denominator).
-* **Statistical Validity**: **Complete registry enumeration**.
+  - Crude Disparity: **$3.83\times$** ($95\%$ CI: $[3.80, 3.87]$) (rising to $4.08\times$ under Census 2022 denominator).
+  - Male 14+ Disparity (Panel H / TVBZ-Std): **$4.34\times$** ($95\%$ CI: $[4.29, 4.38]$).
+* **Statistical Validity**: **Complete registry enumeration with exact binomial/Poisson rate ratio confidence intervals**.
 * **Caveats & Limitations (*Das Nennerproblem*)**:
   - The BKA explicitly warns in its *IMK-Bericht* (p. 41 & 50) against computing TVBZ for non-citizens: the numerator counts non-resident visitors, transit travelers, tourists, cross-border commuters, and non-registered persons (~27.7% non-resident core per BKA Table 29), whereas the denominator is restricted strictly to registered residents (*Wohnbevölkerung*).
 
@@ -82,44 +83,42 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
 
 ### Panel E: Joint Risk Concentration [Zensus 2022 & EU-SILC 2023 | Fréchet 2006]
 * **File**: [`panel_e_joint_risk_concentration.png`](./panel_e_joint_risk_concentration.png)
-* **Methodological Role**: **Novel original research contribution**. Unlike the other panels which synthesize official registry data or existing criminological survey literature, Panel E develops the formal mathematical derivation of joint demographic-economic risk concentration.
-* **Methodology**: Replaces unreflective independent marginal multiplication ($P(A)\cdot P(B)\cdot P(C)$) with the **exact conditional chain rule over the harmonized 14–30 window**:
+* **Methodological Role**: **Illustrative Baseline Model ($M_{\text{ind}}$) & Analytical Copula Bounds**. In accordance with Responsible Demographics (Pillar 3), because individual-level microdata crossing nationality, age, biological sex, and poverty simultaneously is partially aggregated, this panel formulates an illustrative baseline model ($M_{\text{ind}}$) under conditional independence, bounded by exact mathematical copula limits.
+* **Methodology**: Evaluates the joint intersection via the **conditional chain rule over the harmonized 14–30 golden window**:
   $$P(\text{Risk} \mid g) = P(\text{Age 14–30} \mid g) \cdot P(\text{Male} \mid \text{Youth 14–30}, g) \cdot P(\text{Poverty} \mid \text{Youth 14–30, Male}, g)$$
-  accompanied by **Fréchet–Hoeffding analytical copula bounds** (Nelsen 2006, Theorem 2.2.3, pp. 10–14; benchmark key `COPULA_FRECHET_HOEFFDING_BOUNDS`) displaying the full mathematical envelope under arbitrary dependency structures, and **Plackett copula sensitivity bounds** (Plackett 1965; benchmark keys `COPULA_PLACKETT_OR_MIN` = 0.8, `COPULA_PLACKETT_OR_MAX` = 1.5).
+  accompanied by **analytical Fréchet–Hoeffding copula bounds** (Nelsen 2006, Theorem 2.2.3, pp. 10–14; benchmark key `COPULA_FRECHET_HOEFFDING_BOUNDS`) displaying the full mathematical envelope under arbitrary dependency structures ($[P_{\min}, P_{\max}]$), and **Plackett copula sensitivity bounds** (Plackett 1965; benchmark keys `COPULA_PLACKETT_OR_MIN` = 0.8, `COPULA_PLACKETT_OR_MAX` = 1.5).
 * **Empirical Parameter Coordinates & Benchmark Keys**:
   1. $P(\text{Age 14–30} \mid g)$: Destatis Census 2022 & Genesis 12411 ($15.9\%$ German vs. $31.2\%$ non-German, $1.96\times$ overhang).
   2. $P(\text{Male} \mid \text{Youth 14–30}, g)$: Destatis Census 2022 & AZR 12521-04 ($51.2\%$ German vs. $55.0\%$ non-German).
   3. $P(\text{Poverty} \mid \text{Youth 14–30, Male}, g)$: Population-weighted composite across cohorts 14–17 ($14.8\%$ vs. $36.2\%$), 18–24 ($22.1\%$ vs. $48.6\%$), and 25–29 ($11.5\%$ vs. $31.8\%$) from EU-SILC Genesis 12211, scaled by male factor $k = 0.968$ ($16.3\%$ German vs. $39.1\%$ non-German).
   4. Copula sensitivity bounds: Ingested dynamically via `bench.loc[...]` from `literature_empirical_benchmarks.csv` (`COPULA_FRECHET_HOEFFDING_BOUNDS`, `COPULA_PLACKETT_OR_MIN`, `COPULA_PLACKETT_OR_MAX`).
-* **Computed Point Estimates (Chain Rule)**:
+* **Computed Point Estimates (Model $M_{\text{ind}}$ under Conditional Independence)**:
   - German resident population: **$1.3\%$** reside in the joint high-risk bracket ($0.159 \times 0.512 \times 0.1632$).
   - Non-German resident population: **$6.7\%$** reside in the joint high-risk bracket ($0.312 \times 0.550 \times 0.3905$).
-  - Structural Concentration Disparity: **$5.04\times$** (approx. **$5\times$** higher concentration).
+  - Model Disparity Ratio ($M_{\text{ind}}$): **$5.04\times$** higher concentration.
 * **Fréchet–Hoeffding Analytical Bounds & Copula Sensitivity**:
   - German population: **$[0.0\%, 2.6\%]$**
   - Non-German population: **$[0.0\%, 12.2\%]$**
-  - Plackett sensitivity range: $\text{OR} \in [0.8, 1.5]$ yields stable disparity between **$4.81\times$ and $5.21\times$**.
-  - *Finding:* Even under extreme worst-case dependence coupling, non-German exposure to joint criminological risk factors is approx. 5-fold higher.
+  - Plackett sensitivity range: $\text{OR} \in [0.8, 1.5]$ yields a stable disparity between **$4.81\times$ and $5.21\times$**.
+  - *Methodological Caveat:* The $5.04\times$ ratio represents a baseline model under conditional independence; true joint concentration requires verified individual microdata cross-tabulations.
 
 ---
 
 ### Panel F: Empirical OECD Meta-Regression: Precarity vs. Violent Crime [Young Adulthood Ages 14–33]
 * **Files**: [`panel_f_oecd_precarity_regression.png`](./panel_f_oecd_precarity_regression.png) (German) & [`panel_f_oecd_precarity_regression_en.png`](./panel_f_oecd_precarity_regression_en.png) (English)
-* **Dataset**: [`datasets/oecd_precarity_crime_meta.csv`](../datasets/oecd_precarity_crime_meta.csv) – Curated cross-national empirical dataset pairing precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 10 landmark longitudinal and total-population register studies from 7 OECD peer nations (Sweden, Netherlands, Norway, United States, New Zealand, Denmark, Finland), with total combined $N > 16.5$ million individuals.
-* **Strict Young Adulthood Offending Career Restriction**: All violent crime outcomes are measured across the young adulthood offending career (ages 14–33), and all precarity metrics are measured during upbringing/childhood. German adolescent school surveys (ages 14–16) were excluded to avoid developmental truncation and secondary citation artifacts.
+* **Dataset**: [`datasets/oecd_precarity_crime_meta.csv`](../datasets/oecd_precarity_crime_meta.csv) – Harmonized cross-national empirical dataset pairing precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 9 landmark longitudinal and total-population register studies from 6 OECD peer nations (Sweden, Netherlands, Norway, United States, Denmark, Finland), with total combined $N = 16,052,606$ individuals. (Theoretical non-empirical papers, such as Moffitt 1993, were excluded to preserve pure empirical integrity).
+* **Strict Young Adulthood Offending Career Restriction**: All violent crime outcomes are measured across the young adulthood offending career (ages 14–33), and all precarity metrics are measured during upbringing/childhood.
 * **Econometric Model & Results**:
   - **DerSimonian-Laird Random-Effects Meta-Regression (REMR)** with Knapp-Hartung standard errors:
-    $$\ln(Y_i) = 0.637 + 0.303 \cdot \ln(X_i)$$
-    - **Heterogeneity & Between-Study Variance**: Cochran's $Q = 34.11$ on 8 df ($p < 0.0001$), decisively rejecting the fixed-effects assumption of zero between-country heterogeneity. DerSimonian-Laird between-study variance is $\tau^2 = 0.00515$ ($\tau = 0.0717$).
-    - **Weight Rebalancing**: Random-effects weighting $w_i^* = 1 / (\sigma_i^2 + \tau^2)$ caps the maximum study weight of the massive Swedish Brå (2021) register ($N = 8,066,363$) at $15.5\%$ (down from $93.3\%$ under fixed-effects WLS), preventing artificial collapse of estimation variance.
-    - **Intercept**: $\beta_0 = 0.637$ ($SE = 0.176, p = 0.0068$, baseline multiplier $\exp(\beta_0) = 1.89\times$).
-    - **Slope**: $\beta_1 = 0.303$ ($SE = 0.177, p = 0.126$ n.s.).
-  - **Register Benchmark Validation**: Across register studies (Sweden LISA $RR = 2.41\times$, Sweden Sariaslan population-level between-family $HR = 2.42\times$, Sweden Brå 21:9 $RR = 2.56\times$, Netherlands WODC $RR = 3.10\times$, Norway SSB 728 $RR = 2.35\times$, Norway SSB 36 $RR = 2.34\times$, Denmark Mok $IRR = 2.90\times$, Finland Sariaslan $HR = 2.52\times$), precarity effect ratios cluster tightly between $2.34\times$ and $3.10\times$.
+    $$\ln(Y_i) = \beta_0 + \beta_1 \cdot \ln(X_i)$$
+    - **Heterogeneity & Between-Study Variance**: Cochran's $Q = 41.68$ on 7 df ($p < 0.0001$), decisively rejecting the fixed-effects assumption of zero between-country heterogeneity.
+    - **Weight Rebalancing**: Random-effects weighting $w_i^* = 1 / (\sigma_i^2 + \tau^2)$ prevents single massive population registers (e.g., Swedish Brå 2021 with $N = 8,066,363$) from collapsing estimation variance.
+  - **Register Benchmark Clustering**: Across register studies (Sweden LISA $RR = 2.41\times$, Sweden Sariaslan $HR = 2.42\times$, Sweden Brå 21:9 $RR = 2.56\times$, Netherlands WODC $RR = 3.10\times$, Norway SSB 728 $RR = 2.35\times$, Norway SSB 36 $RR = 2.34\times$, Denmark Mok $IRR = 2.90\times$, Finland Sariaslan $HR = 2.52\times$), precarity effect ratios cluster tightly between $2.34\times$ and $3.10\times$.
   - **German Projection**: For empirical German precarity ratios:
-    - Destatis Mikrozensus SES $< 40$ ($X_{\text{DE}} = 2.21$): $\widehat{Y}_{\text{DE}} = \mathbf{2.40\times}$ ($95\%$ CI: $[2.17\times, 2.66\times]$, $95\%$ PI: $[1.98\times, 2.92\times]$)
-    - Destatis Mikrozensus D1–D3 ($X_{\text{DE}} = 2.64$): $\widehat{Y}_{\text{DE}} = \mathbf{2.54\times}$ ($95\%$ CI: $[2.38\times, 2.71\times]$, $95\%$ PI: $[2.12\times, 3.03\times]$) – **Central Value for Panels G & I**
-    - Destatis EU-SILC At-Risk-of-Poverty ($X_{\text{DE}} = 2.90$): $\widehat{Y}_{\text{DE}} = \mathbf{2.61\times}$ ($95\%$ CI: $[2.42\times, 2.81\times]$, $95\%$ PI: $[2.18\times, 3.13\times]$)
-  - **Empirical Validation**: Establishes an empirical OECD calibration corridor $[2.17\times, 2.81\times]$ with central estimate $\widehat{Y} = 2.54\times$ (and 95% Prediction Interval $[1.98\times, 3.13\times]$), replacing arbitrary single-country reliance with a methodologically sound random-effects multi-country anchor.
+    - Destatis Mikrozensus SES $< 40$ ($X_{\text{DE}} = 2.21$): $\widehat{Y}_{\text{DE}} \approx \mathbf{2.38\times}$ ($95\%$ CI: $[2.17\times, 2.66\times]$)
+    - Destatis Mikrozensus D1–D3 ($X_{\text{DE}} = 2.64$): $\widehat{Y}_{\text{DE}} \approx \mathbf{2.52\times}$–$\mathbf{2.54\times}$ ($95\%$ CI: $[2.38\times, 2.71\times]$) – **Central Anchor for Panels G & I**
+    - Destatis EU-SILC At-Risk-of-Poverty ($X_{\text{DE}} = 2.90$): $\widehat{Y}_{\text{DE}} \approx \mathbf{2.60\times}$ ($95\%$ CI: $[2.42\times, 2.81\times]$)
+  - **Scope & Methodological Role**: Serves as a comparative cross-national sensitivity corridor ($[2.17\times, 2.81\times]$) demonstrating the empirical order of magnitude of crime risk attributable to socioeconomic deprivation in peer nations, rather than definitive individual-level causal identification within the PKS (which contains no individual SES).
 
 ---
 
@@ -149,12 +148,12 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
 ### Panel H: Official BKA Register Decomposition Waterfall [BKA PKS 2023 & Destatis Census 2022]
 * **File**: [`panel_h_bka_waterfall.png`](./panel_h_bka_waterfall.png) (standalone synthesis: [`decomposition_waterfall.png`](./decomposition_waterfall.png))
 * **Data Sources**: Official BKA PKS 2023 Tables T29 (crime location vs. residence), T40 (German suspects), T50 (non-German suspects), and Destatis Census 2022 / BV-01/02 population registers.
-* **Empirical Decomposition Stages (Males 14+)**:
-  1. **Raw PKS Rate (Nichtdeutsche Männer 14+)**: **$1,203.4$** per 100,000 ($4.34\times$ vs. German raw $277.5$).
-  2. **Residence Adjustment (BKA T29 Tier 3)**: Non-residents and persons with no fixed abode accounted for $13.88\%$ of suspects; deducting them lowers the rate to **$1,036.4$** per 100,000 ($-167.0$, $3.74\times$).
-  3. **Direct Age Standardization (Destatis Standard Population)**: Equalizing the asymmetric youth bulge lowers the rate to **$880.3$** per 100,000 ($-156.1$, $3.08\times$ vs. German age-standardized baseline **$285.8$**).
+* **Empirical Decomposition Stages (Males 14+) with 95% Confidence Intervals**:
+  1. **Raw PKS Rate (Nichtdeutsche Männer 14+)**: **$1,203.4$** per 100,000 ($4.34\times$ vs. German raw $277.5$; $95\%$ CI: $[4.29, 4.38]$).
+  2. **Residence Adjustment (BKA T29 Tier 3)**: Non-residents and persons with no fixed abode accounted for $13.88\%$ of suspects; deducting them lowers the rate to **$1,036.4$** per 100,000 ($-167.0$, $3.74\times$; $95\%$ CI: $[3.70, 3.78]$).
+  3. **Direct Age Standardization (Destatis Standard Population)**: Equalizing the asymmetric youth bulge lowers the rate to **$880.3$** per 100,000 ($-156.1$, $3.08\times$; $95\%$ CI: $[3.05, 3.11]$ vs. German age-standardized baseline **$285.8$**).
   4. **German Baseline (Altersstandardisiert 14+)**: **$285.8$** per 100,000 ($1.00\times$).
-* **Methodological Boundary of Register Data**: Police statistics (Hellfeld) record neither reporting behavior nor socioeconomic variables. The remaining $3.08\times$ disparity in the register is deconstructed by the OECD precarity sensitivity analysis (Panels F & I: $2.17\times$–$2.81\times$, central $2.54\times$) and darkfield differential reporting bias ($1.5\times$–$2.1\times$).
+* **Methodological Boundary of Register Data**: Police statistics (Hellfeld) record neither reporting behavior nor socioeconomic variables. The remaining $3.08\times$ disparity in the register is analyzed in conjunction with the cross-national OECD precarity sensitivity corridor (Panels F & I: $2.17\times$–$2.81\times$, central $2.52\times$–$2.54\times$) and darkfield differential reporting bias ($1.5\times$–$2.1\times$).
 
 ---
 
@@ -166,8 +165,8 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
   - **Raw Non-German Curve (BKA T50 / AZR)**: Peaks at $3,938.7$ per 100k across the full 14–80 life course.
   - **Residence-Adjusted Non-German Curve (BKA T29 Tier 3: $-13.9\%$)**: Deducting non-residents and persons without fixed residence lowers the peak to $\sim 3,392$ per 100k.
   - **Strict Scope Limitation of Precarity Control to Ages 14–30**: In strict adherence to scientific rigor, the precarity-controlled trajectory and the green OECD sensitivity corridor are restricted exclusively to the **14–30 age window** (the empirical scope of the OECD young adulthood longitudinal studies).
-  - **Precarity-Controlled Curve & OECD Sensitivity Band**: Applying the empirical OECD precarity effect corridor from Panel F ($\widehat{Y}_{\text{DE}} \in [2.17\times, 2.81\times]$ across German poverty measures, with OECD REMR central estimate $\mathbf{2.54\times}$) causes the youth peak to drop from $3,392$ to **$\sim 1,335$** per 100k (with a prominent 95% CI uncertainty corridor of **$[1,207, 1,563]$**, spanning $356$ per 100k), converging closely toward the German baseline ($1,165$ per 100k).
-  - **Methodological Synthesis**: Demonstrates how administrative residence correction and empirical OECD precarity calibration together resolve the observed young adulthood offending disparity.
+  - **Precarity-Controlled Curve & OECD Sensitivity Band**: Applying the empirical OECD precarity effect corridor from Panel F ($\widehat{Y}_{\text{DE}} \in [2.17\times, 2.81\times]$ across German poverty measures, with central estimate $\sim \mathbf{2.52\times}$–$\mathbf{2.54\times}$) causes the youth peak to drop from $3,392$ to **$\sim 1,335$** per 100k (with a prominent 95% CI uncertainty corridor of **$[1,207, 1,563]$**, spanning $356$ per 100k), converging closely toward the German baseline ($1,165$ per 100k).
+  - **Methodological Synthesis**: Demonstrates how administrative residence correction and empirical OECD precarity calibration together explain the observed young adulthood offending disparity corridor.
 
 ---
 
@@ -176,15 +175,16 @@ $$\text{Execution: } \texttt{python src/modeling.py}$$
 ### Stream A: Official National Registry Decomposition Waterfall (Males Aged 14+)
 * **File**: [`decomposition_waterfall.png`](./decomposition_waterfall.png) (and [`panel_h_bka_waterfall.png`](./panel_h_bka_waterfall.png))
 * **Function**: Visualizes the sequential reduction of the national registered violent crime disparity among males aged 14+:
-  1. Crude registered non-German rate (males 14+): **$1,203.4$** per 100,000 ($4.34\times$)
-  2. Denominator adjustment (non-residents per BKA T29 Tier 3): $-167.0 \longrightarrow \mathbf{1,036.4}$ per 100,000 ($3.74\times$)
-  3. Demographic age standardization (Destatis standard population): $-156.1 \longrightarrow \mathbf{880.3}$ per 100,000 ($3.08\times$)
+  1. Crude registered non-German rate (males 14+): **$1,203.4$** per 100,000 ($4.34\times$, $95\%$ CI: $[4.29, 4.38]$)
+  2. Denominator adjustment (non-residents per BKA T29 Tier 3): $-167.0 \longrightarrow \mathbf{1,036.4}$ per 100,000 ($3.74\times$, $95\%$ CI: $[3.70, 3.78]$)
+  3. Demographic age standardization (Destatis standard population): $-156.1 \longrightarrow \mathbf{880.3}$ per 100,000 ($3.08\times$, $95\%$ CI: $[3.05, 3.11]$)
   4. German male reference rate (Age-standardized): **$285.8$** per 100,000 ($1.00\times$).
 * **Scientific Boundary**: Register data ends at $3.08\times$. BKA PKS does not record socioeconomic status or victim reporting behavior.
 
-### Stream B: Darkfield Survey Explanation (KFN Representative Surveys)
-* **Reporting Bias (*Anzeigeverzerrung*)**: Victim surveys indicate that violent encounters involving foreign or stranger suspects are reported $1.5\times$ to $2.1\times$ more frequently than identical intra-ethnic incidents (KFN FB 107, p. 11; Pfeiffer et al. 2018, p. 21). This bias is not applied as a hard accounting deduction to register rates because it was measured on adolescent petty offenses and does not generalize to adult serious violence.
-* **Living Conditions Decomposition**: In representative adolescent surveys (KFN FB 107, $N = 44,610$), equalizing socioeconomic status and family environments eliminates the violence disparity ($6.4\%$ vs. $5.9\%$, $p = 0.56$ n.s., Panel H).
+### Stream B: Darkfield Survey Findings & Living Conditions (KFN Representative Surveys)
+* **Reporting Bias (*Anzeigeverzerrung*)**: Victim surveys indicate that violent encounters involving foreign or stranger suspects are reported $1.5\times$ to $2.1\times$ more frequently than identical intra-ethnic incidents (KFN FB 107, p. 11; Pfeiffer et al. 2018, p. 21). This bias is not applied as a hard accounting deduction to register rates because it was measured on adolescent petty offenses and does not generalize directly to adult serious violence.
+* **Living Conditions Decomposition**: In representative adolescent school surveys (KFN FB 107, $N = 44,610$), equalizing socioeconomic status and family environments eliminates the violence disparity among 9th-graders ($6.4\%$ German vs. $5.9\%$ Turkish, ratio $0.92\times$, $95\%$ CI: $[0.65, 1.30]$, $p = 0.56$ n.s.).
+* **Construct Divergence Caveat**: Adolescent school surveys measure sociological *migration background* among enrolled 9th-graders, whereas the PKS classifies strictly by *formal citizenship* across all adult ages, including temporary residents and newly arrived refugees in reception centers. The two data streams must be kept distinct.
 
 ---
 

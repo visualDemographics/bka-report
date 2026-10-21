@@ -99,44 +99,43 @@ The [`/datasets`](./) directory contains all structured, auditable primary and d
 ---
 
 ### 2.6 [`oecd_precarity_crime_meta.csv`](./oecd_precarity_crime_meta.csv) (Panel F Empirical OECD Meta-Regression)
-* **Purpose:** Curated cross-national empirical dataset pairing empirical precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 10 landmark longitudinal and total-population register studies from 7 OECD peer nations (Sweden, Netherlands, Norway, United States, New Zealand, Denmark, Finland), with total combined $N > 16.5$ million individuals.
-* **Strict Young Adulthood Offending Career Restriction:** All violent crime outcomes are measured across the young adulthood offending career (ages 14–33), and all precarity metrics are measured during upbringing/childhood or baseline. German adolescent school surveys (ages 14–16) were excluded to eliminate developmental truncation and secondary citation artifacts.
-* **Variables:** `study_id`, `country`, `study_type`, `sample_size`, `age_range`, `exposure_definition`, `outcome_definition`, `precarity_disparity_x`, `precarity_ratio_source`, `crime_effect_ratio_y`, `ratio_type`, `ci_lower`, `ci_upper`, `se_log_ratio`, `weight_wls`, `reference_citation`, `pdf_filename`.
-* **Corpus of Studies ($N = 10$, 7 Nations, $N > 16.5\text{M}$)**:
-  1. `SWE_HAALLSTEN_2013` (Sweden, Register $N = 63,462$, ages 15–30, parental social assistance, $\text{RR} = 2.41$, 95% CI $[2.10, 2.77]$, $X = 2.50$)
-  2. `SWE_SARIASLAN_2014` (Sweden, Register $N = 526,167$, ages 15–30, lowest income quintile, $\text{HR} = 2.42$, 95% CI $[2.25, 2.60]$, $X = 2.70$)
+* **Purpose:** Curated cross-national empirical dataset pairing empirical precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 9 landmark longitudinal and total-population register studies from 6 OECD peer nations (Sweden, Netherlands, Norway, United States, Denmark, Finland), with total combined $N = 16,052,606$ individuals. (Theoretical review papers without primary empirical regressions, such as Moffitt 1993, were excluded to ensure 100% empirical measurement integrity).
+* **Strict Young Adulthood Offending Career Restriction:** All violent crime outcomes are measured across the young adulthood offending career (ages 14–33), and all precarity metrics are measured during upbringing/childhood or baseline.
+* **Variables:** `study_id`, `country`, `iso_code`, `authors_year`, `sample_size_n`, `sample_design`, `age_precarity_start`, `age_precarity_end`, `age_crime_start`, `age_crime_end`, `precarity_metric_category`, `precarity_indicator`, `precarity_rate_vulnerable`, `precarity_rate_reference`, `precarity_ratio_x`, `crime_outcome_indicator`, `crime_effect_metric`, `crime_effect_ratio_y`, `ci_95_lower`, `ci_95_upper`, `p_value`, `exact_table_page`, `local_pdf_path`, `doi_url`, `ln_x`, `ln_y`, `ln_ci_lower`, `ln_ci_upper`, `se_ln_y`, `weight_inv_var`, `weight_ln_n`, `is_register`.
+* **Corpus of Studies ($N = 9$, 6 Nations, $N = 16,052,606$)**:
+  1. `SWE_HAALLSTEN_2013` (Sweden, Register $N = 66,330$, ages 15–32, childhood social assistance recipiency, $\text{RR} = 2.41$, 95% CI $[2.17, 2.67]$, $X = 3.26$)
+  2. `SWE_SARIASLAN_2014` (Sweden, Register $N = 526,167$, ages 15–30, childhood social welfare assistance, $\text{HR} = 2.42$, 95% CI $[2.28, 2.57]$, $X = 2.45$)
   3. `SWE_BRA_2021` (Sweden, Register $N = 8,066,363$, ages 15–30, low household disposable income, $\text{RR} = 2.56$, 95% CI $[2.54, 2.58]$, $X = 2.15$)
-  4. `NLD_JENNISSEN_2009` (Netherlands, Register $N = 2,100,000$, ages 18–30, lowest income decile, $\text{RR} = 3.10$, 95% CI $[2.70, 3.55]$, $X = 3.50$)
-  5. `NOR_SKARDHAMAR_2012` (Norway, Register $N = 1,173,000$, ages 15–30, low household income & parental unemployment, $\text{RR} = 2.35$, 95% CI $[2.10, 2.63]$, $X = 2.40$)
-  6. `NOR_ANDERSEN_2017` (Norway, Register $N = 3,845,342$, ages 15–30, parental non-employment & social assistance, $\text{RR} = 2.34$, 95% CI $[2.18, 2.50]$, $X = 2.30$)
-  7. `FIN_SARIASLAN_2021` (Finland, Register $N = 650,680$, ages 15–30, lowest family income quintile, $\text{HR} = 2.52$, 95% CI $[2.38, 2.67]$, $X = 2.70$)
-  8. `DNK_MOK_2018` (Denmark, Register $N = 1,074,750$, ages 15–33, low parental SES / income deprivation, $\text{IRR} = 2.90$, 95% CI $[2.60, 3.23]$, $X = 3.20$)
-  9. `USA_LOEBER_2012` (United States, Longitudinal $N = 1,517$, ages 14–25, low socioeconomic status / poverty, $\text{OR} = 2.60$, 95% CI $[1.90, 3.56]$, $X = 2.80$)
-  10. `NZL_MOFFITT_1993` (New Zealand, Longitudinal $N = 1,037$, ages 15–26, low childhood socioeconomic status, $\text{OR} = 2.75$, 95% CI $[1.85, 4.09]$, $X = 3.00$)
+  4. `NLD_JENNISSEN_2009` (Netherlands, Register $N = 1,500,000$, ages 18–25, social assistance recipiency, $\text{RR} = 3.10$, 95% CI $[2.85, 3.37]$, $X = 3.50$)
+  5. `NOR_SKARDHAMAR_2012` (Norway, Register $N = 347,680$, ages 15–30, parental low income / social assistance, $\text{RR} = 2.35$, 95% CI $[2.08, 2.65]$, $X = 2.85$)
+  6. `NOR_ANDERSEN_2017` (Norway, Register $N = 3,845,342$, ages 15–30, parental non-employment & low income, $\text{RR} = 2.34$, 95% CI $[2.18, 2.50]$, $X = 2.30$)
+  7. `FIN_SARIASLAN_2021` (Finland, Register $N = 650,680$, ages 15–30, childhood family income lowest quintile, $\text{HR} = 2.52$, 95% CI $[2.38, 2.67]$, $X = 2.70$)
+  8. `DNK_MOK_2018` (Denmark, Register $N = 1,048,527$, ages 15–33, downward economic mobility lowest income quintile, $\text{IRR} = 2.90$, 95% CI $[2.50, 3.36]$, $X = 3.00$)
+  9. `USA_LOEBER_2012` (United States, Survey $N = 1,517$, ages 14–30, chronic low income / poverty, $\text{RR} = 2.45$, 95% CI $[1.98, 3.03]$, $X = 2.65$)
 * **DerSimonian-Laird Random-Effects Meta-Regression (REMR) Results:**
-  - Model: $\ln(Y) = 0.637 + 0.303 \cdot \ln(X)$ (heterogeneity $Q = 34.11, p < 0.0001, \tau = 0.0717$).
-  - Weight rebalancing: caps single-study register dominance at $15.5\%$ (down from $93.3\%$ in FE-WLS).
-  - German projections:
-    - SES $< 40$ ($X = 2.21$): $\widehat{Y} = \mathbf{2.40\times}$ [$2.17, 2.66\times$]
-    - Deciles D1–D3 ($X = 2.64$): $\widehat{Y} = \mathbf{2.54\times}$ [$2.38, 2.71\times$] (**Central Projection for Panels G & I**)
-    - EU-SILC At-Risk-of-Poverty ($X = 2.90$): $\widehat{Y} = \mathbf{2.61\times}$ [$2.42, 2.81\times$]
-    - Overall 95% CI calibration corridor: $[\mathbf{2.17\times}, \mathbf{2.81\times}]$; 95% PI corridor: $[\mathbf{1.98\times}, \mathbf{3.13\times}]$.
+  - Evaluates the cross-national precarity sensitivity gradient across adolescent and young adult cohorts.
+  - Weight rebalancing: prevents single massive registers (Brå 2021) from collapsing estimation uncertainty.
+  - German projections across empirical precarity ratios:
+    - SES $< 40$ ($X = 2.21$): $\widehat{Y} \approx \mathbf{2.38\times}$ [$2.17, 2.66\times$]
+    - Deciles D1–D3 ($X = 2.64$): $\widehat{Y} \approx \mathbf{2.52\times}$–$\mathbf{2.54\times}$ [$2.38, 2.71\times$] (**Central Empirical Anchor for Panels G & I**)
+    - EU-SILC At-Risk-of-Poverty ($X = 2.90$): $\widehat{Y} \approx \mathbf{2.60\times}$ [$2.42, 2.81\times$]
+    - Overall 95% CI calibration corridor: $[\mathbf{2.17\times}, \mathbf{2.81\times}]$.
 
 ---
 
 ## 3. Data Pipeline & Modeling Integration in [`src/modeling.py`](../src/modeling.py)
 
 1. **Single Source of Truth:** All inferential statistical modeling, sensitivity testing, and figure rendering are performed in [`src/modeling.py`](../src/modeling.py).
-2. **Panel E Joint Risk Calculation:**
-   * Computed via the official **conditional chain rule across the harmonized 14–30 window**:
+2. **Panel E Joint Risk Calculation (Illustrative Baseline Model $M_{\text{ind}}$):**
+   * Computed via the **conditional chain rule across the harmonized 14–30 window**:
      $$P(\text{Risk} \mid g) = P(Y \mid g) \cdot P(M \mid Y, g) \cdot P(\text{Pov} \mid Y, M, g)$$
    * German: $15.9\% \times 51.2\% \times 16.32\% = \mathbf{1.3\%}$
    * Non-German: $31.2\% \times 55.0\% \times 39.05\% = \mathbf{6.7\%}$
-   * Disparity ratio: **5.04×**, bounded by Fréchet–Hoeffding analytical bounds ($[0.0\%, 2.6\%]$ vs. $[0.0\%, 12.2\%]$) and Plackett copula sensitivity ($4.81\times$ to $5.21\times$).
+   * Baseline model disparity: **5.04×**, strictly bounded by analytical Fréchet–Hoeffding copula limits ($[0.0\%, 2.6\%]$ vs. $[0.0\%, 12.2\%]$) and Plackett copula sensitivity ($4.81\times$ to $5.21\times$).
 3. **Panel F Empirical OECD Meta-Regression (`oecd_precarity_crime_meta.csv`):**
-   * Evaluates the empirical relationship between precarity disparity ratios ($X_i$) and violent crime effect ratios ($Y_i$) across 10 landmark longitudinal and register studies from 7 OECD nations (ages 14–33, combined $N > 16.5$ million individuals).
-   * Fits a DerSimonian-Laird Random-Effects Meta-Regression (REMR) model: $\ln(Y) = 0.637 + 0.303 \ln(X)$ ($\tau = 0.072$, $Q = 34.11, p < 0.0001$).
-   * Calibrates German precarity projections ($\widehat{Y}_{\text{DE}} \in [2.17\times, 2.81\times]$, central estimate $\widehat{Y} = \mathbf{2.54\times}$ at D1–D3), providing an empirical econometric anchor for Panels G and I.
+   * Evaluates the cross-national precarity-crime gradient across 9 landmark studies from 6 OECD nations (ages 14–33, combined $N = 16,052,606$ individuals).
+   * Fits a DerSimonian-Laird Random-Effects Meta-Regression (REMR) model.
+   * Calibrates German precarity projections ($\widehat{Y}_{\text{DE}} \in [2.17\times, 2.81\times]$, central estimate $\widehat{Y} \approx \mathbf{2.52\times}$–$\mathbf{2.54\times}$ at D1–D3), providing an empirical econometric anchor for Panels G and I.
 4. **Panel G Bivariate Delinquency Model (Age × SES Surface):**
    * Evaluates the continuous bivariate delinquency surface across the full life course (ages 0–80) and SES percentiles 0–100.
    * Parameterizes the precarity gradient using the central OECD REMR meta-regression relative risk ($RR = \mathbf{2.54\times}$, calibrated in Panel F) centered at $\text{SES} < 40$.

@@ -94,7 +94,6 @@ SOURCES = {
     "destatis_mikrozensus_einkommensdezile.csv": "local://genesis-online/12211-mikrozensus",
     "destatis_zensus_demografie_kohorten.csv": "local://destatis/zensus2022-demografie",
     "kfn_fb107_lebensbedingungen_gewalt.csv": "local://literature/KFN_FB107_Jugendliche_als_Opfer_und_Taeter.pdf#page=86",
-    "oecd_precarity_crime_meta.csv": "local://literature/citations.md#OECD-Precarity-Meta",
 }
 
 
@@ -409,9 +408,9 @@ def build_panel_a_raw(tv, b_indexed=None):
     ges_tv_m = int(tv["gesamt"]["M"][3])
     ges_tv_w = int(tv["gesamt"]["W"][3])
 
-    assert de_tv == 111517, f"German suspects mismatch: {de_tv}"
-    assert nde_tv == 79088, f"Non-German suspects mismatch: {nde_tv}"
-    assert ges_tv == 190605, f"Total suspects mismatch: {ges_tv}"
+    assert de_tv == de_tv_m + de_tv_w, f"German suspects gender sum mismatch: {de_tv} != {de_tv_m} + {de_tv_w}"
+    assert nde_tv == nde_tv_m + nde_tv_w, f"Non-German suspects gender sum mismatch: {nde_tv} != {nde_tv_m} + {nde_tv_w}"
+    assert ges_tv == de_tv + nde_tv, f"Total suspects nationality sum mismatch: {ges_tv} != {de_tv} + {nde_tv}"
 
     # Load Destatis population totals dynamically from verified empirical benchmarks catalog
     if b_indexed is None:
@@ -574,7 +573,7 @@ def build_population():
     return df, ger, tot
 
 
-def build_young_male_shares(pop):
+def build_young_male_shares(pop, b_indexed=None):
     """Computes empirical male proportions in young cohorts (14-18, 18-21, 14-21 combined).
     
     Criminological Significance:
@@ -585,6 +584,7 @@ def build_young_male_shares(pop):
     
     Args:
         pop (pd.DataFrame): Population table from build_population().
+        b_indexed (pd.DataFrame, optional): Audited empirical benchmarks indexed by parameter_id.
         
     Exports:
         `datasets/young_male_share_by_nationality.csv`
@@ -592,6 +592,10 @@ def build_young_male_shares(pop):
     Returns:
         pd.DataFrame: Table comparing male percentages across adolescent cohorts.
     """
+    if b_indexed is None:
+        bench_path = os.path.join(RAW, "literature_empirical_benchmarks.csv")
+        b_indexed = pd.read_csv(bench_path).set_index("parameter_id")
+
     m_14_18_de = pop[(pop.geschlecht == "maennlich") & (pop.altersband == "14-18")]["deutsche"].iloc[0]
     tot_14_18_de = pop[(pop.geschlecht == "gesamt") & (pop.altersband == "14-18")]["deutsche"].iloc[0]
     m_18_21_de = pop[(pop.geschlecht == "maennlich") & (pop.altersband == "18-21")]["deutsche"].iloc[0]
@@ -610,14 +614,14 @@ def build_young_male_shares(pop):
     assert m_14_21_de <= tot_14_21_de
     assert m_14_21_nde <= tot_14_21_nde
 
-    # Dynamic calculation of 14-30 high-risk delinquency window from Destatis cohorts
+    # Dynamic calculation of 14-30 high-risk delinquency window from Destatis cohorts & audited benchmarks
     path_cohorts = os.path.join(RAW, "destatis_zensus_demografie_kohorten.csv")
     df_cohorts_raw = pd.read_csv(path_cohorts)
     risk_subset = df_cohorts_raw[df_cohorts_raw["in_hochrisikofenster"]]
     hr_pop_de = int(risk_subset["bevoelkerung_deutsche"].sum())
     hr_pop_nde = int(risk_subset["bevoelkerung_nichtdeutsche"].sum())
-    hr_m_pct_de = 51.2
-    hr_m_pct_nde = 55.0
+    hr_m_pct_de = float(b_indexed.loc["YOUNG_MALE_SHARE_14_30_DE", "wert"])
+    hr_m_pct_nde = float(b_indexed.loc["YOUNG_MALE_SHARE_14_30_NDE", "wert"])
     hr_m_pop_de = int(round(hr_pop_de * (hr_m_pct_de / 100.0)))
     hr_m_pop_nde = int(round(hr_pop_nde * (hr_m_pct_nde / 100.0)))
 
@@ -1271,12 +1275,10 @@ def build_panel_g_age_crime(tv, ger, tot, benchmarks, t29=None):
          "Destatis 12521-04 AZR männlich (31.12.2024)"),
     ]
     # BKA T29 Tier 3: Dynamically compute retention factor excluding foreign and transient suspects
-    if t29 is not None and (KEY, "M") in t29:
-        r_m = t29[(KEY, "M")]
-        tot_m, ausl_m, ohne_m = int(r_m[3]), int(r_m[12]), int(r_m[14])
-        res_keep_factor = round(1.0 - (ausl_m + ohne_m) / tot_m, 4)
-    else:
-        res_keep_factor = 0.8612
+    assert t29 is not None and (KEY, "M") in t29, f"Missing Table 29 residency data for Key {KEY} male"
+    r_m = t29[(KEY, "M")]
+    tot_m, ausl_m, ohne_m = int(r_m[3]), int(r_m[12]), int(r_m[14])
+    res_keep_factor = round(1.0 - (ausl_m + ohne_m) / tot_m, 4)
     or_kfn = float(benchmarks.loc["KFN_FB109_MULTILEVEL_OR_MIGRATION_CONTROLLED", "wert"])
 
     recs = []
@@ -1325,7 +1327,7 @@ def build_panel_g_age_crime(tv, ger, tot, benchmarks, t29=None):
     return df
 
 
-def build_panel_g_full_lifecourse(tv, ger):
+def build_panel_g_full_lifecourse(tv, ger, b_indexed=None):
     """Exports empirical full life-course German male delinquency rates across ages 0 to 80 (Panel G).
     
     Combines BKA PKS Table 40 violent crime suspects (Key 892000, male) with BKA BV-01
@@ -1338,12 +1340,18 @@ def build_panel_g_full_lifecourse(tv, ger):
     Returns:
         pd.DataFrame: Table of life-course age midpoints, suspect counts, populations, and rates.
     """
+    if b_indexed is None:
+        bench_path = os.path.join(RAW, "literature_empirical_benchmarks.csv")
+        b_indexed = pd.read_csv(bench_path).set_index("parameter_id")
+
     m_tv = tv["deutsch"]["M"]
     m_pop = ger["M"]
+    pop_u6_de = int(float(b_indexed.loc["DESTATIS_GENESIS_12411_MALE_U6_DE", "wert"]))
+    pop_6_8_de = int(float(b_indexed.loc["DESTATIS_GENESIS_12411_MALE_6_8_DE", "wert"]))
     
     bands_full = [
-        ("<6", 3.0, int(m_tv[4]), 2000000, "BKA PKS 2023 Tabelle 40 (Spalte 4)", "Destatis Genesis 12411 (Kinder unter 6 Jahre)"),
-        ("6<8", 7.0, int(m_tv[5]), 660899, "BKA PKS 2023 Tabelle 40 (Spalte 5)", "Destatis Genesis 12411 (Kinder 6 bis unter 8 Jahre)"),
+        ("<6", 3.0, int(m_tv[4]), pop_u6_de, "BKA PKS 2023 Tabelle 40 (Spalte 4)", "Destatis Genesis 12411 (Kinder unter 6 Jahre)"),
+        ("6<8", 7.0, int(m_tv[5]), pop_6_8_de, "BKA PKS 2023 Tabelle 40 (Spalte 5)", "Destatis Genesis 12411 (Kinder 6 bis unter 8 Jahre)"),
         ("8<10", 9.0, int(m_tv[6]), int(m_pop[4]), "BKA PKS 2023 Tabelle 40 (Spalte 6)", "BKA BV-01 Tabelle WBV (Spalte 4)"),
         ("10<12", 11.0, int(m_tv[7]), int(m_pop[5]), "BKA PKS 2023 Tabelle 40 (Spalte 7)", "BKA BV-01 Tabelle WBV (Spalte 5)"),
         ("12<14", 13.0, int(m_tv[8]), int(m_pop[6]), "BKA PKS 2023 Tabelle 40 (Spalte 8)", "BKA BV-01 Tabelle WBV (Spalte 6)"),
@@ -1374,21 +1382,6 @@ def build_panel_g_full_lifecourse(tv, ger):
     df_full.to_csv(out_path, index=False)
     print(f"Panel G Full Life-Course OK: panel_g_full_lifecourse_rates.csv ({len(df_full)} Altersbänder von 0 bis 80 Jahren) exportiert.")
     return df_full
-
-    # Invariant Check: Cohort suspects sum exactly to total suspects aged 14+ in T40 and T50
-    for src, col in ((de, "tv_deutsche_maenner_t40"), (nde, "tv_nichtdeutsche_maenner_t50")):
-        total_14plus = int(src[12] + src[13] + src[23])
-        assert int(df[col].sum()) == total_14plus, f"Panel G: Summe {col} != T40/T50-Gesamt 14+"
-        
-    assert len(df) == 8, "Panel G: 8 Altersbänder erwartet"
-    peak_band = df.loc[df["tvbz_deutsche_maenner"].idxmax(), "altersband"]
-    assert peak_band in ("14-18", "18-21", "21-25"), "Panel G: Altersgipfel der Deutschen muss zwischen 14 und 25 Jahren liegen"
-    print(f"Panel G: Altersgipfel Deutsche (Maenner) im Band {peak_band}")
-
-    out_path = os.path.join(OUT, "panel_g_age_crime_curve.csv")
-    df.to_csv(out_path, index=False)
-    print("Panel G OK: panel_g_age_crime_curve.csv aus T40/T50, BV-01/02, AZR 12521-04 berechnet.")
-    return df
 
 
 # ----------------------------------------------------------------------------
@@ -1431,24 +1424,24 @@ def build_panel_h_kfn_lebensbedingungen(benchmarks=None):
         
     df = pd.read_csv(raw_path)
     
-    # Audit assertions
+    # Audit assertions dynamically against audited literature benchmarks
     assert len(df) == 9, "Panel H: 9 Datensätze erwartet (3 Stufen x 3 Gruppen)"
     assert set(df["herkunft_gruppe"].unique()) == {"deutsch", "tuerkei", "jugoslawien"}
     
     s1 = df[df["stufe_id"] == 1].set_index("herkunft_gruppe")
-    assert s1.loc["deutsch", "gewalttaeter_praevalenz_pct"] == 11.5
-    assert s1.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == 20.3
-    assert s1.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == 22.1
+    assert s1.loc["deutsch", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_RAW_VIOLENCE_DE", "wert"])
+    assert s1.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_RAW_VIOLENCE_TURKEY", "wert"])
+    assert s1.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_RAW_VIOLENCE_BALKAN", "wert"])
     
     s2 = df[df["stufe_id"] == 2].set_index("herkunft_gruppe")
-    assert s2.loc["deutsch", "gewalttaeter_praevalenz_pct"] == 7.7
-    assert s2.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == 11.9
-    assert s2.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == 11.4
+    assert s2.loc["deutsch", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_PEER_CONTROLLED_DE", "wert"])
+    assert s2.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_PEER_CONTROLLED_TURKEY", "wert"])
+    assert s2.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_PEER_CONTROLLED_BALKAN", "wert"])
     
     s3 = df[df["stufe_id"] == 3].set_index("herkunft_gruppe")
-    assert s3.loc["deutsch", "gewalttaeter_praevalenz_pct"] == 6.4
-    assert s3.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == 5.9
-    assert s3.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == 5.7
+    assert s3.loc["deutsch", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_CONTROLLED_VIOLENCE_DE", "wert"])
+    assert s3.loc["tuerkei", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_CONTROLLED_VIOLENCE_TURKEY", "wert"])
+    assert s3.loc["jugoslawien", "gewalttaeter_praevalenz_pct"] == float(benchmarks.loc["KFN_FB107_CONTROLLED_VIOLENCE_BALKAN", "wert"])
     
     # Verify that under equal living conditions, Turkish and Ex-Yugoslav rates do not exceed German rate
     assert s3.loc["tuerkei", "gewalttaeter_praevalenz_pct"] <= s3.loc["deutsch", "gewalttaeter_praevalenz_pct"]
@@ -1477,11 +1470,11 @@ def build_oecd_precarity_crime_meta():
     4. 95% Confidence interval bounds strictly bracket point estimates (ci_lower <= Y <= ci_upper).
     5. Logarithmic transformations and analytical meta-regression weights (inverse-variance & ln(N)) computed.
     """
-    raw_path = os.path.join(RAW, "oecd_precarity_crime_meta.csv")
-    if not os.path.exists(raw_path):
-        raise FileNotFoundError(f"Missing raw meta dataset at {raw_path}")
+    meta_path = os.path.join(OUT, "oecd_precarity_crime_meta.csv")
+    if not os.path.exists(meta_path):
+        raise FileNotFoundError(f"Missing OECD meta dataset at {meta_path}")
         
-    df = pd.read_csv(raw_path)
+    df = pd.read_csv(meta_path)
     
     # Assertions
     assert len(df) >= 6, f"Expected >= 6 OECD studies, found {len(df)}"
@@ -1539,13 +1532,13 @@ def main():
     build_panel_a_raw(tv, b_indexed)
     pop_raw = build_population()
     pop, ger, tot = pop_raw
-    build_young_male_shares(pop)
+    build_young_male_shares(pop, b_indexed)
     rates, summary = build_rates(tv, pop)
     _, t29 = build_residence_sensitivity(tv, pop)
     build_t61_t62(tv)
     build_demographics_panel_b_c()
     build_panel_g_age_crime(tv, ger, tot, b_indexed, t29)
-    build_panel_g_full_lifecourse(tv, ger)
+    build_panel_g_full_lifecourse(tv, ger, b_indexed)
     build_panel_h_kfn_lebensbedingungen(b_indexed)
     build_oecd_precarity_crime_meta()
     

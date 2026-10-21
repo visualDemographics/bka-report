@@ -49,19 +49,19 @@ A common flaw in crime disparity research is conflating exogenous confounders wi
 
 ### 4. The Joint-Risk Fallacy & Demographic Cohort Harmonization (Panel E)
 * Multiplying single marginal probabilities ($P(\text{Male}) \times P(\text{Age 14–30}) \times P(\text{SES} < 40)$) under the assumption of statistical independence is **methodologically invalid**, as age, biological sex, and poverty are inherently correlated in real populations.
-* Joint concentrations in this pipeline are calculated via the **conditional chain rule across the harmonized 14–30 window**:
+* In accordance with Pillar 3 of Responsible Demographics, joint concentrations in this pipeline are calculated via the **conditional chain rule across the harmonized 14–30 window as an illustrative baseline model ($M_{\text{ind}}$)**:
   $$P(\text{Risk} \mid g) = P(\text{Age 14–30} \mid g) \cdot P(\text{Male} \mid \text{Youth 14–30}, g) \cdot P(\text{Poverty} \mid \text{Youth 14–30, Male}, g)$$
-  and safeguarded by **Fréchet–Hoeffding analytical bounds** as well as Plackett Copula sensitivity tests ($\text{OR} \in [0.8, 1.5]$).
+  and safeguarded by **Fréchet–Hoeffding analytical bounds** ($[P_{\min}, P_{\max}]$) as well as Plackett Copula sensitivity tests ($\text{OR} \in [0.8, 1.5]$).
 * **Cohort Harmonization & Analytical Bounds (Audit Safeguard for Panel E)**:
   - $P(\text{Youth} \mid g)$ from Census 2022 / Genesis 12411 covers the criminological young bracket **14–30 years** ($15.9\%$ German vs. $31.2\%$ non-German, $1.96\times$ youth overhang).
   - $P(\text{Male} \mid \text{Youth}, g)$ from Census 2022 & AZR 12521-04 covers the entire **14–30 years** bracket ($51.2\%$ German vs. $55.0\%$ non-German).
   - $P(\text{Poverty} \mid \text{Youth}, g)$ from Destatis EU-SILC Genesis 12211 is population-weighted across the sub-cohorts spanning 14–30 (14–17 at 14.8%/36.2%, 18–24 at 22.1%/48.6%, and 25–29 at 11.5%/31.8%), yielding a weighted youth poverty rate of $16.9\%$ vs. $40.4\%$. Applying the male factor $k = 0.968$ yields $16.32\%$ vs. $39.05\%$.
-  - The analytical **Fréchet–Hoeffding Copula Bounds** reported in Panel E reflect the full mathematical envelope under arbitrary dependency structures ($[0.0\%, 2.6\%]$ for Germans vs. $[0.0\%, 12.2\%]$ for non-Germans). The conditional chain rule point estimates (**$1.3\%$ vs. $6.7\%$**, disparity **$5.04\times$**) provide an audited, mathematically harmonized benchmark reflecting joint risk concentration across the peak delinquency years. Plackett copula sensitivity ($\text{OR} \in [0.8, 1.5]$) demonstrates stability between $4.81\times$ and $5.21\times$.
+  - The analytical **Fréchet–Hoeffding Copula Bounds** reported in Panel E reflect the full mathematical envelope under arbitrary dependency structures ($[0.0\%, 2.6\%]$ for Germans vs. $[0.0\%, 12.2\%]$ for non-Germans). The conditional chain rule point estimates (**$1.3\%$ vs. $6.7\%$**, disparity **$5.04\times$**) provide an audited baseline model ($M_{\text{ind}}$) reflecting joint risk concentration across the peak delinquency years under conditional independence. Plackett copula sensitivity ($\text{OR} \in [0.8, 1.5]$) demonstrates stability between $4.81\times$ and $5.21\times$. True empirical joint concentrations require dedicated microdata cross-tabulations.
 
 ---
 
 ### 5. Police-Reporting Bias & The Darkfield (*Dunkelfeld*)
-* Criminological victim surveys (e.g., KFN Lower Saxony Survey, Baier et al. 2009, Pfeiffer et al. 2018) prove that offenses committed by strangers or outgroup members have substantially higher police reporting rates (29.3% vs. 19.5%, a factor of 1.50×) compared to offenses committed within familiar social circles.
+* Criminological victim surveys (e.g., KFN Lower Saxony Survey, Baier et al. 2009, Pfeiffer et al. 2018) demonstrate that offenses committed by strangers or outgroup members have substantially higher police reporting rates (29.3% vs. 19.5%, a factor of ~1.50×) compared to offenses committed within familiar social circles.
 * However, this empirical finding must not be converted into arbitrary, across-the-board percentage discounts; it must be documented as an empirical reporting sensitivity range.
 
 ---
