@@ -1179,6 +1179,8 @@ def build_literature_benchmarks():
     assert or_equal < 1.0, "KFN FB 107: Unter gleichen Lebensbedingungen sinkt OR unter 1.0 (nicht signifikant)"
     or_ml = float(b_indexed.loc["KFN_FB109_MULTILEVEL_OR_MIGRATION_CONTROLLED", "wert"])
     assert 0.95 <= or_ml <= 1.05, "KFN FB 109: Mehrebenen-OR für nichtdeutsche Herkunft liegt bei ~1.003 (n.s.)"
+    tost_bound = float(b_indexed.loc["KFN_FB107_TOST_EQUIVALENCE_MARGIN_OR", "wert"])
+    assert 1.10 <= tost_bound <= 1.50, "TOST-Aequivalenzschranke muss im plausiblen Korridor [1.1, 1.5] liegen"
 
     # 7. Validation: Copula Theory & Analytical Bounds (Nelsen 2006, Plackett 1965)
     copula_bounds_val = float(b_indexed.loc["COPULA_FRECHET_HOEFFDING_BOUNDS", "wert"])
@@ -1470,9 +1472,14 @@ def build_oecd_precarity_crime_meta():
     4. 95% Confidence interval bounds strictly bracket point estimates (ci_lower <= Y <= ci_upper).
     5. Logarithmic transformations and analytical meta-regression weights (inverse-variance & ln(N)) computed.
     """
-    meta_path = os.path.join(OUT, "oecd_precarity_crime_meta.csv")
-    if not os.path.exists(meta_path):
-        raise FileNotFoundError(f"Missing OECD meta dataset at {meta_path}")
+    lit_meta_path = os.path.join(ROOT, "literature", "oecd_precarity_crime_meta.csv")
+    ds_meta_path = os.path.join(OUT, "oecd_precarity_crime_meta.csv")
+    if os.path.exists(lit_meta_path):
+        meta_path = lit_meta_path
+    elif os.path.exists(ds_meta_path):
+        meta_path = ds_meta_path
+    else:
+        raise FileNotFoundError(f"Missing OECD meta dataset at {lit_meta_path} or {ds_meta_path}")
         
     df = pd.read_csv(meta_path)
     

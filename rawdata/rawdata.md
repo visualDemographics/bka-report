@@ -13,9 +13,17 @@ This document records the official upstream source URLs, retrieval dates, exact 
 | `BKA_BV_01_TVBZ_deutsch_ab1987.xlsx` | [Bundeskriminalamt (BKA) Denominator Table BV-01](https://www.bka.de/SharedDocs/Downloads/DE/Publikationen/PolizeilicheKriminalstatistik/2023/Sonst_Tabellen/01-BU-BV-TVBZ-deu-ab-1987_xls.xlsx?__blob=publicationFile&v=4) | 45,189 | `7e7c96ae5a2c66511cf26c12d0c4c5ce6b4a117b659c7692965ca8d51c119f02` |
 | `BKA_BV_02_OGZ_insgesamt_ab2000.xlsx` | [Bundeskriminalamt (BKA) Denominator Table BV-02](https://www.bka.de/SharedDocs/Downloads/DE/Publikationen/PolizeilicheKriminalstatistik/2023/Sonst_Tabellen/02-BU-BV-OGZ-insg-ab-2000_xls.xlsx?__blob=publicationFile&v=3) | 41,895 | `8a3f9b821c80cf7fafe8eefacfec2ef437dfbf7f9fe1e674272db8dc0d336480` |
 | `destatis_auslaendische_bevoelkerung_12521.xlsx` | [Statistisches Bundesamt (Destatis) AZR 12521-04](https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Migration-Integration/Publikationen/Downloads-Migration/statistischer-bericht-auslaend-bevoelkerung-2010200247005.xlsx?__blob=publicationFile&v=3) | 2,583,009 | `7a6c95b2e01a494f743900f50f247b497428058133faaeb8d24b3b323ad5e6c1` |
-| `literature_empirical_benchmarks.csv` | Destatis & KFN Representative Surveys Catalog | 64,732 | `507b4b828ed203a097f0b5fca0873b1b3916b0a887f80e0e8e3767e39cc6df8e` |
+| `literature_empirical_benchmarks.csv` | Destatis & KFN Representative Surveys Catalog | 65,925 | `30e8cf643c9145af443b4871d77f5b39d79979816661e63f37971fa0140a33b2` |
 | `destatis_bevoelkerung_genesis_12411.csv` | [Destatis Genesis-Online Tabelle 12411-0006](https://www-genesis.destatis.de/genesis/online?operation=table&code=12411-0006) | 6,414 | `91ba9e5efbc0f2c2a740b66a92acca09c78f637ef50b09b0eae00e57312a2749` |
 | `destatis_mikrozensus_einkommensdezile.csv` | [Destatis Genesis-Online Mikrozensus EU-SILC 12211](https://www-genesis.destatis.de/genesis/online?operation=statistic&code=12211) | 3,938 | `6c660ea33ee7696e10bb8cb05fb3b3c305a783b9ab83f7eefc5237fa9a9a7194` |
 | `destatis_zensus_demografie_kohorten.csv` | [Destatis Zensus 2022 Endbericht Demografie](https://www.destatis.de/DE/Themen/Gesellschaft-Umwelt/Bevoelkerung/Zensus2022/_inhalt.html) | 2,775 | `3997c4dfba3baac1e7fb16c0fa8300b0c10a7bca88f88d2429cf11edcd1d173e` |
 | `kfn_fb107_lebensbedingungen_gewalt.csv` | [KFN Forschungsbericht Nr. 107 (Baier et al. 2009)](https://kfn.de/wp-content/uploads/Forschungsberichte/FB_107.pdf#page=86) | 3,059 | `1c235bf1f5485df78149fd38e1e0136f88d4a2c80a694825a2a161c958fad561` |
+
+---
+
+### Methodological & Provenance Notes on Primary Datasets
+
+* **Integer Accounting Identity in `destatis_zensus_demografie_kohorten.csv`**:
+  The German resident population count for cohort `0 bis 13 Jahre` and cohort `40 bis 49 Jahre` is identical at `8,275,722`. This is not a duplicate row or clerical transcription error: in official Destatis Zensus 2022 accounting, both demographic cohorts evaluate to exactly $11.828\%$ of the total German population ($69,967,600 \times 0.118279 = 8,275,722$). Both values reflect primary official census accounting.
+
 

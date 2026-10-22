@@ -361,8 +361,8 @@ def check_4_oecd_meta_provenance():
         pdf_ref = str(row.get("local_pdf_path", "") or "").strip()
         pdf_rel = pdf_ref.split("#")[0].strip()
         pdf_abs = os.path.join(ROOT, pdf_rel)
-        if not pdf_rel or not os.path.exists(pdf_abs) or os.path.getsize(pdf_abs) < 1000:
-            print(f"  FAIL [Check 4]: Study `{sid}` local_pdf_path `{pdf_rel}` is missing or empty.")
+        if not pdf_rel or not os.path.exists(pdf_abs) or os.path.getsize(pdf_abs) < 1000 or not pdf_rel.endswith(".pdf"):
+            print(f"  FAIL [Check 4]: Study `{sid}` local_pdf_path `{pdf_rel}` is missing, empty, or not a valid PDF file.")
             return False
 
     print(f"  ✓ Verified {len(df)} empirical OECD cohort studies across {df['country'].nunique()} nations (Total N = {df['sample_size_n'].sum():,}).")
