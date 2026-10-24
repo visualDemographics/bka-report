@@ -87,3 +87,27 @@ Once all parallel workers have reported back:
    .venv/bin/python3 .agents/skills/responsible-research/scripts/audit_research_pipeline.py
    ```
 
+---
+
+## 3. Production Invariants & Anti-Corruption Protocol
+
+Field testing across high-throughput literature harvesting revealed four common failure modes that must be proactively blocked:
+
+### 1. Paywall Landing Pages Masquerading as PDFs
+Publisher servers often return HTTP 200 containing HTML paywalls (`<!DOCTYPE html>`) when `curl` or `wget` attempts to fetch a `.pdf` URL:
+* **The Check**: Every downloaded `.pdf` must begin with the `%PDF-` magic header, be $\ge 1{,}000$ bytes, and pass a test parse with `pypdf`.
+* **Remedy**: Never rename an HTML landing page to `.pdf`. If paywalled, either query an open-access green repository (PubMed Central, institutional university handle, national statistical portal) or generate a verified extract PDF using `--create-extract-pdf`.
+
+### 2. PubMed Central (PMC) ID Collisions & Title Verification
+When querying PMC APIs or open-access mirrors, guessing or mistyping PMC numbers downloads a valid PDF of an entirely unrelated paper:
+* **The Check**: Always run `verify_and_register_harvest.py --verify-file <path> --keywords "<Author>,<SampleSize_or_Term>"`. The verification script verifies that the author's surname and key sample size or topic term appear verbatim inside the parsed PDF or XML text.
+
+### 3. Pure Conceptual/Taxonomy Papers vs. Empirical Meta-Regressions
+Classic foundational literature (e.g., Moffitt 1993 dual taxonomy) is often cited for theoretical frameworks, but lacks empirical relative risks or odds ratios:
+* **Rule**: Never insert invented effect sizes or sample sizes for theoretical papers into quantitative meta-regression tables (`oecd_precarity_crime_meta.csv`).
+* **Correct Classification**: Theoretical parameters belong in `literature_empirical_benchmarks.csv` with `methodischer_status = Strukturelle_Modellkalibrierung`, and must be excluded from empirical cross-national meta-regressions.
+
+### 4. Strict Directory Boundaries: `rawdata/` vs. Derived Syntheses
+* **`rawdata/` is strictly for unmodified primary source files**: Never place hand-curated multi-study meta-analysis CSVs in `rawdata/` pretending they were downloaded from a single official server. Derived cross-study datasets belong in `datasets/` or `literature/`.
+* **Bi-Directional Manifest Synchronization**: Whenever a new benchmark row is merged into `rawdata/literature_empirical_benchmarks.csv`, ensure it is synced to `datasets/literature_empirical_benchmarks.csv` **and** re-hash `rawdata/MANIFEST.csv` and `rawdata/rawdata.md` via `--sync-manifest --update`. Untracked files in `rawdata/` will fail the cryptographic audit gate.
+

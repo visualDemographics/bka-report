@@ -108,31 +108,35 @@ The official police register decomposition for males aged 14+ transitions from t
 ---
 
 ### 7. Cross-National OECD Meta-Regression (REMR) & Heterogeneity Diagnostics
-Panel F integrates a DerSimonian-Laird Random-Effects Meta-Regression (REMR) over 9 landmark empirical cohort studies across 6 OECD peer nations (Sweden, Norway, Finland, Denmark, Netherlands, United States; total $N = 16,052,606$):
+Panel F integrates a DerSimonian-Laird Random-Effects Meta-Regression (REMR) over 12 landmark empirical cohort studies across 9 OECD peer nations (Sweden, Norway, Finland, Denmark, Netherlands, United States, France, United Kingdom, Austria; total $N = 17,909,254$):
 1. **Model Specification & Heterogeneity**:
    - Model: $\ln(Y_i) = \beta_0 + \beta_1 \ln(X_i) + u_i + \epsilon_i$, where $u_i \sim \mathcal{N}(0, \tau^2)$.
-   - Cochran's $Q = 34.08$ ($df = 7, p < 0.0001$).
-   - Between-study variance: $\tau^2 = 0.0054$ ($\tau = 0.0736$).
-   - Higgins' Heterogeneity Index: $I^2 = 79.5\%$, confirming substantial between-country heterogeneity that warrants a random-effects framework over fixed-effects WLS.
-   - Knapp-Hartung small-sample standard error adjustment applied to test statistics ($t_{\text{crit}} = 2.365$).
+   - Cochran's $Q = 232.41$ ($df = 10, p < 0.0001$).
+   - Between-study variance: $\tau^2 = 0.0328$ ($\tau = 0.1812$).
+   - Higgins' Heterogeneity Index: $I^2 = 95.7\%$, confirming substantial between-country heterogeneity that warrants a random-effects framework over fixed-effects WLS.
+   - Knapp-Hartung small-sample standard error adjustment applied to test statistics ($t_{\text{crit}} = 2.228$).
+   - Model equation: $\ln(Y) = 0.5423 + 0.4030 \cdot \ln(X)$.
 2. **Central Projection Corridor & Jackknife Sensitivity**:
-   - For primary German income precarity ($D_1\text{--}D_3$, ratio $X = 2.64$), the central REMR prediction is $\hat{Y} = 2.53\times$ (mean prediction 95% CI: $[2.36\times, 2.72\times]$).
-   - Microcensus SES $< 40$ ($X = 2.21$): $\hat{Y} = 2.40\times$ (95% CI: $[2.15\times, 2.67\times]$).
-   - EU-SILC At-Risk-of-Poverty ($X = 2.90$): $\hat{Y} = 2.61\times$ (95% CI: $[2.41\times, 2.82\times]$).
-   - Overall empirical German calibration corridor (95% CI): $[2.15\times, 2.82\times]$.
-   - *Jackknife Leave-One-Country-Out Analysis*:
-     - Drop Sweden: $\hat{Y} = 2.56\times$
-     - Drop Netherlands: $\hat{Y} = 2.48\times$
-     - Drop Norway: $\hat{Y} = 2.55\times$
-     - Drop United States: $\hat{Y} = 2.54\times$
-     - Drop Denmark: $\hat{Y} = 2.49\times$
+   - For primary German income precarity ($D_1\text{--}D_3$, ratio $X = 2.64$), the central REMR prediction is $\hat{Y} = 2.54\times$ (mean prediction 95% CI: $[2.23\times, 2.90\times]$).
+   - Microcensus SES $< 40$ ($X = 2.21$): $\hat{Y} = 2.37\times$ (95% CI: $[1.87\times, 3.00\times]$).
+   - EU-SILC At-Risk-of-Poverty ($X = 2.90$): $\hat{Y} = 2.64\times$ (95% CI: $[2.32\times, 3.01\times]$).
+   - Overall empirical German calibration corridor (95% CI): $[2.23\times, 2.90\times]$.
+   - *Jackknife Leave-One-Country-Out Analysis across 9 Nations*:
+     - Drop Sweden: $\hat{Y} = 2.48\times$
+     - Drop Netherlands: $\hat{Y} = 2.53\times$
+     - Drop Norway: $\hat{Y} = 2.58\times$
+     - Drop United States: $\hat{Y} = 2.55\times$
+     - Drop Denmark: $\hat{Y} = 2.53\times$
      - Drop Finland: $\hat{Y} = 2.55\times$
-     - Stability corridor across all exclusions: $[2.48\times, 2.58\times]$, confirming that the central precarity anchor is robust to any single country's inclusion.
+     - Drop France: $\hat{Y} = 2.49\times$
+     - Drop United Kingdom: $\hat{Y} = 2.55\times$
+     - Drop Austria: $\hat{Y} = 2.60\times$
+     - Stability corridor across all exclusions: $[2.48\times, 2.60\times]$, confirming that the central precarity anchor is robust to any single country's inclusion.
 3. **Prediction Interval & Methodological Boundaries**:
-   - The 95% Prediction Interval incorporating between-country variance $\tau^2$ spans $[1.95\times, 3.15\times]$ across the German precarity range (and $[2.10\times, 3.06\times]$ at D1–D3), reflecting genuine institutional and welfare state differences across OECD nations.
+   - The 95% Prediction Interval incorporating between-country variance $\tau^2$ spans $[1.66\times, 3.89\times]$ across the German precarity range (and $[1.66\times, 3.89\times]$ at D1–D3), reflecting genuine institutional and welfare state differences across OECD nations.
    - *Construct Boundary & Epidemiological Interpretation*:
-     - **Counterfactual Exposure Equalization ($Y / RR_{\text{precarity}}$)**: Applying the central relative risk ($RR = 2.53\times$, corridor $[2.15\times, 2.82\times]$) directly to the non-German suspect rate models the counterfactual outcome if the structural precarity penalty were entirely neutralized.
-     - **Population Compositional Confounder ($\text{CF}_{\text{SES}}$)**: Under standard epidemiological standardization (Rothman 2008), differential exposure rates ($p_{\text{NDE}} = 61.5\%$ vs. $p_{\text{DE}} = 23.3\%$ in D1–D3) yield a compositional confounding factor $\text{CF}_{\text{SES}} = \frac{1 + p_{\text{NDE}}(RR - 1)}{1 + p_{\text{DE}}(RR - 1)} = \frac{1 + 0.615(1.53)}{1 + 0.233(1.53)} \approx \mathbf{1.43\times}$. Income precarity per se accounts for approximately 30% of the residual young male register disparity, with remaining differences attributable to unobserved non-income structural factors (accommodation in collective reception centers, employment bans, trauma, peer networks, and differential darkfield reporting behavior).
+     - **Counterfactual Exposure Equalization ($Y / RR_{\text{precarity}}$)**: Applying the central relative risk ($RR = 2.54\times$, corridor $[2.23\times, 2.90\times]$) directly to the non-German suspect rate models the counterfactual outcome if the structural precarity penalty were entirely neutralized.
+     - **Population Compositional Confounder ($\text{CF}_{\text{SES}}$)**: Under standard epidemiological standardization (Rothman 2008), differential exposure rates ($p_{\text{NDE}} = 61.5\%$ vs. $p_{\text{DE}} = 23.3\%$ in D1–D3) yield a compositional confounding factor $\text{CF}_{\text{SES}} = \frac{1 + p_{\text{NDE}}(RR - 1)}{1 + p_{\text{DE}}(RR - 1)} = \frac{1 + 0.615(1.543)}{1 + 0.233(1.543)} \approx \mathbf{1.43\times}$. Income precarity per se accounts for approximately 44% of the residence-adjusted youth peak disparity overhang, with remaining differences attributable to unobserved non-income structural factors (accommodation in collective reception centers, employment bans, trauma, peer networks, and differential darkfield reporting behavior).
 4. **Causal Interpretation & Sibling Fixed-Effects Attenuation (Sariaslan et al. 2014, 2021)**:
    - The effect ratios $Y_i$ in the OECD meta-regression reflect **macro-observational population disparities** ($RR, HR, IRR \approx 2.34\text{--}3.10\times$). In Nordic register studies, children growing up in low-income or welfare-dependent households exhibit more than double the rate of subsequent registered violent crime in young adulthood.
    - However, rigorous sibling-comparison studies (notably Sariaslan et al. 2014 in Sweden and Sariaslan et al. 2021 in Finland) demonstrate that within-family discordant sibling models attenuate the hazard ratio for family income substantially (attenuating from $HR \approx 2.42\text{--}2.52$ at the population level to $HR \approx 1.10\text{--}1.12$, virtually indistinguishable from unity).
@@ -147,7 +151,7 @@ Panel G calibrates a continuous bivariate delinquency hazard surface $R(\text{Ag
    - Constrained such that the marginal integral over uniform SES percentiles identically reproduces the empirical BKA male Age-Crime curve across all age slices:
      $$\frac{1}{100} \int_0^{100} R(a, s) \, ds \equiv A_{\text{PKS}}(a) \quad \forall a \in [0, 80] \quad (\text{drift } < 10^{-10}).$$
 2. **Developmental Calibration Parameters**:
-   - Calibrated using the OECD precarity central anchor ($RR = 2.53\times$ across SES $< 40$, Atkinson 1987 logistic kernel $k = 0.12$), adolescent maturity gap weights ($w_{\text{gap}} = 0.35, w_{\text{depr}} = 0.65$, Moffitt 1993), and adult turning point persistence delay ($\tau = 25.0\text{ years}$, Sampson & Laub 1993, 2003).
+   - Calibrated using the OECD precarity central anchor ($RR = 2.54\times$ across SES $< 40$, Atkinson 1987 logistic kernel $k = 0.12$), adolescent maturity gap weights ($w_{\text{gap}} = 0.35, w_{\text{depr}} = 0.65$, Moffitt 1993), and adult turning point persistence delay ($\tau = 25.0\text{ years}$, Sampson & Laub 1993, 2003).
 3. **Explicit Methodological Status**:
    - Panel G is a **theoretical and structural response surface model** illustrating how developmental criminology and empirical precarity gradients interact over the life course. It is **not** an empirical 3D microdata cross-tabulation, as official police registers contain no socioeconomic microdata.
 
@@ -159,9 +163,9 @@ Panel I synthesizes the full life-course empirical trajectories (ages 14 to 80) 
    - **Stage 0 (Raw Registered Non-German Peak)**: $3,939\text{ per 100,000}$ (vs. German baseline $1,165\text{ per 100,000}$, raw disparity $3.38\times$).
    - **Stage 1 (Residence Adjustment, BKA Table 29 Tier 3: $-13.9\%$)**: Deducting non-residents residing abroad and individuals without permanent abode drops the peak to $3,392\text{ per 100,000}$ ($2.91\times$).
    - **Stage 2 (Demographic SES Standardization, $\text{CF}_{\text{SES}} = 1.43\times$)**: Plotted as the solid purple curve (`#8e44ad`). Standardizes the non-German cohort to the observed German poverty baseline (Destatis EU-SILC D1–D3: $61.5\%$ vs. $23.3\%$) via Rothman's population confounding factor:
-     $$\text{CF}_{\text{SES}} = \frac{1 + p_{\text{NDE}}(RR - 1)}{1 + p_{\text{DE}}(RR - 1)} = \frac{1 + 0.615 \times 1.534}{1 + 0.233 \times 1.534} = \mathbf{1.432}$$
+     $$\text{CF}_{\text{SES}} = \frac{1 + p_{\text{NDE}}(RR - 1)}{1 + p_{\text{DE}}(RR - 1)} = \frac{1 + 0.615 \times 1.543}{1 + 0.233 \times 1.543} = \mathbf{1.434} \approx \mathbf{1.43\times}$$
      lowering the peak from $3,392$ to **$2,367\text{ per 100,000}$**, explaining **$44\%$** of the residence-adjusted peak gap without assuming unobserved individual counterfactuals.
-   - **OECD SES Safety Band**: Shaded purple area reflecting the empirical 95% CI uncertainty corridor from the OECD REMR meta-regression ($RR \in [2.15\times, 2.82\times]$), propagating to an SES confounding factor corridor of $\text{CF}_{\text{SES}} \in [1.35\times, 1.49\times]$ and bracketing the standardized peak within **$[2,280, 2,518]\text{ per 100,000}$**.
+   - **OECD SES Safety Band**: Shaded purple area reflecting the empirical 95% CI uncertainty corridor from the OECD REMR meta-regression ($RR \in [2.23\times, 2.90\times]$), propagating to an SES confounding factor corridor of $\text{CF}_{\text{SES}} \in [1.36\times, 1.50\times]$ and bracketing the standardized peak within **$[2,260, 2,490]\text{ per 100,000}$**.
 2. **Reconciliation of Causal Dimensions & Symmetric Zero-Poverty Equivalence**:
    - The demographic SES standardization ($\text{CF} = 1.43\times$, peak $2,367$) models the observable effect of equalizing precarity to the German reference baseline ($23.3\%$), leaving a residual disparity of **$2.03\times$** ($2,367$ vs. $1,165$).
    - *Symmetric Zero-Poverty Theorem*: Hypothetically eradicating poverty to $0\%$ in both groups scales both curves down symmetrically by factor $1 + 0.233 \times 1.534 = 1.357\times$ ($1,165 \to 858$ and $3,392 \to 1,745$), maintaining identically the same residual disparity ratio ($\frac{1,745}{858} = \frac{2,367}{1,165} = \mathbf{2.03\times}$). The plotted trajectory standardizes against the empirical German baseline to preserve real-world administrative reference grounding.

@@ -474,21 +474,41 @@ def fit_models(data):
     }
 
     # --- PANEL G & I: Non-linear Curve Fitting of Empirical Age-Crime Curves (SciPy Optimize) ---
+    # Full Life-Course German Age Distribution from Age 0 to 80 (BKA T40 & BV-01 / Destatis 12411)
+    df_full_lc = data["full_lifecourse"]
+    emp_ages_full = df_full_lc["alter_mitte"].to_numpy(dtype=float)
+    emp_rates_full = df_full_lc["tvbz_deutsche_maenner"].to_numpy(dtype=float)
+
+    def age_crime_full_lifecourse(a, a_peak, mu, sigma, a_adult, tau, k_on, x_on):
+        """Universal life-course representation of the Age-Crime Curve with statutory juvenile onset
+        sigmoid (Farrington 1986, § 19 StGB), adolescent maturity gap peak (Moffitt 1993),
+        and adult turning-point exponential desistance (Sampson & Laub 1993, 2003)."""
+        onset = 1.0 / (1.0 + np.exp(-k_on * (a - x_on)))
+        peak = a_peak * np.exp(-((a - mu) ** 2) / (2.0 * (sigma ** 2)))
+        adult = a_adult * np.exp(-a / tau)
+        return onset * (peak + adult)
+
+    # Harmonize Panel I with Panel G: Single unified life-course specification across all analyses
+    age_crime_func = age_crime_full_lifecourse
+
+    # 1. Fit German full life course across Ages 0–80
+    p0_full = [550, 16.5, 3.0, 1600, 22.0, 0.6, 13.0]
+    popt_full, _ = opt.curve_fit(age_crime_full_lifecourse, emp_ages_full, emp_rates_full, p0=p0_full, maxfev=10000)
+    popt_de = popt_full
+    k_on_val = float(popt_full[5])
+    x_on_val = float(popt_full[6])
+
+    # 2. Extract discrete empirical points for plotting (Ages 14–80)
     df_g = data["age_curve"]
     emp_ages = df_g["alter_mitte"].to_numpy(dtype=float)
     emp_de = df_g["tvbz_deutsche_maenner"].to_numpy(dtype=float)
     emp_nde_ctrl = df_g["tvbz_nichtdeutsche_maenner_kontrolliert"].to_numpy(dtype=float)
 
-    # Extract raw empirical non-German suspect rates from BKA Table T50 / AZR
     valid_g = df_g.dropna(subset=["tvbz_nichtdeutsche_maenner_roh"])
     emp_ages_nde_raw = valid_g["alter_mitte"].to_numpy(dtype=float)
     emp_nde_raw_valid = valid_g["tvbz_nichtdeutsche_maenner_roh"].to_numpy(dtype=float)
 
-    def age_crime_func(x, a, mu, sigma, b, tau):
-        """Universal double-exponential / Gaussian mixture representation of the Age-Crime Curve."""
-        return a * np.exp(-((x - mu) ** 2) / (2 * sigma ** 2)) + b * np.exp(-x / tau)
-
-    # Initialize curve fit on German empirical suspect rates using Moffitt (1993) benchmark priors
+    # Initialize curve fit using Moffitt (1993) benchmark priors
     p0_mu = float(bench.loc["MOFFITT_PEAK_AGE", "wert"])
     p0_sig = float(bench.loc["MOFFITT_PEAK_SIGMA", "wert"])
     # Verified KFN darkfield survey benchmarks
@@ -496,33 +516,23 @@ def fit_models(data):
     or_kfn_unadj = float(bench.loc["KFN_FB107_OR_UNADJUSTED_POOLED", "wert"])
     or_kfn_equal = float(bench.loc["KFN_FB107_OR_EQUAL_CONDITIONS_POOLED", "wert"])
 
-    p0 = [1500, p0_mu, p0_sig, 60, 30]
-    popt_de, _ = opt.curve_fit(age_crime_func, emp_ages, emp_de, p0=p0, maxfev=10000)
+    # 3. Fit raw empirical Non-German curve from BKA T50 / AZR register points
+    # Statutory juvenile onset in Germany (§ 19 StGB) is identical across all residents (k_on, x_on fixed from full life course)
+    # Peak age mu is anchored to the empirical 14–18 youth cohort midpoint to prevent artificial peak inflation between discrete cohorts
+    mu_nde_peak = float(emp_ages_nde_raw[0])
+    def age_crime_nde_fit(a, a_peak, sigma, a_adult, tau):
+        return age_crime_full_lifecourse(a, a_peak, mu_nde_peak, sigma, a_adult, tau, k_on_val, x_on_val)
 
-    # Fit raw empirical Non-German curve from BKA T50 / AZR register points
-    p0_nde = [4000, 17.5, 5.0, 500, 25]
-    popt_nde_raw, _ = opt.curve_fit(age_crime_func, emp_ages_nde_raw, emp_nde_raw_valid, p0=p0_nde, maxfev=10000)
+    p0_nde = [2500, p0_sig, 4500, 22.0]
+    popt_nde_4, _ = opt.curve_fit(age_crime_nde_fit, emp_ages_nde_raw, emp_nde_raw_valid, p0=p0_nde, maxfev=10000)
+    popt_nde_raw = [popt_nde_4[0], mu_nde_peak, popt_nde_4[1], popt_nde_4[2], popt_nde_4[3], k_on_val, x_on_val]
 
     # Residence-adjusted curve parameters (BKA T29 Tier 3: dynamically derived from Table 29 male suspects)
     df_t29 = data["t29"]
     r_m = df_t29[(df_t29["straftat"] == "Gewaltkriminalitaet") & (df_t29["geschlecht"] == "maennlich")].iloc[0]
     res_factor = round(1.0 - (float(r_m["wohnsitz_ausland"]) + float(r_m["ohne_festen_oder_unbekannter_wohnsitz"])) / float(r_m["nichtdeutsche_tv"]), 4)
-    popt_nde_res = [popt_nde_raw[0] * res_factor, popt_nde_raw[1], popt_nde_raw[2], popt_nde_raw[3] * res_factor, popt_nde_raw[4]]
+    popt_nde_res = [popt_nde_raw[0] * res_factor, popt_nde_raw[1], popt_nde_raw[2], popt_nde_raw[3] * res_factor, popt_nde_raw[4], k_on_val, x_on_val]
     popt_nde = popt_nde_res
-
-    # --- PANEL G: Full Life-Course German Age Distribution from Age 0 to 80 (BKA T40 & BV-01 / Destatis 12411) ---
-    df_full_lc = data["full_lifecourse"]
-    emp_ages_full = df_full_lc["alter_mitte"].to_numpy(dtype=float)
-    emp_rates_full = df_full_lc["tvbz_deutsche_maenner"].to_numpy(dtype=float)
-
-    def age_crime_full_lifecourse(a, a_peak, mu, sigma, a_adult, tau, k_on, x_on):
-        onset = 1.0 / (1.0 + np.exp(-k_on * (a - x_on)))
-        peak = a_peak * np.exp(-((a - mu) ** 2) / (2.0 * (sigma ** 2)))
-        adult = a_adult * np.exp(-a / tau)
-        return onset * (peak + adult)
-
-    p0_full = [550, 16.5, 3.0, 1600, 22.0, 0.6, 13.0]
-    popt_full, _ = opt.curve_fit(age_crime_full_lifecourse, emp_ages_full, emp_rates_full, p0=p0_full, maxfev=10000)
 
     # --- PANEL H: Empirical Youth Violence by Origin and Living Conditions (KFN FB 107) ---
     df_h = data.get("kfn_h", data.get("ses_reg"))
@@ -1030,7 +1040,7 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
 
     # 1. Shaded Region for German Precarity Disparity Range (Mikrozensus SES < 40 to EU-SILC)
     ax.axvspan(x_de_min, x_de_max, color="#FFF9C4", alpha=0.55, zorder=0,
-               label=f"Prekaritätsspanne Deutschland (X_DE = {x_de_min:.2f}–{x_de_max:.2f})" if is_de else f"German Precarity Range (X_DE = {x_de_min:.2f}–{x_de_max:.2f})")
+               label=f"Prekarität Dt. (X={x_de_min:.2f}–{x_de_max:.2f})" if is_de else f"Precarity Range (X={x_de_min:.2f}–{x_de_max:.2f})")
 
     # 2. REMR Regression Line & 95% Confidence Band
     x_plot = reg["x_plot"]
@@ -1041,7 +1051,7 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
     pi_upper = reg["pi_re_upper"]
 
     ax.fill_between(x_plot, ci_lower, ci_upper, color="#4a90e2", alpha=0.20, zorder=2,
-                    label=f"95% Konfidenzband (REMR, τ = {reg['tau']:.3f})" if is_de else f"95% Confidence Band (REMR, τ = {reg['tau']:.3f})")
+                    label=f"95%-KI Band (τ = {reg['tau']:.3f})" if is_de else f"95% CI Band (τ = {reg['tau']:.3f})")
     
     if pi_lower is not None and pi_upper is not None and is_standalone:
         ax.plot(x_plot, pi_lower, color="#1f4e78", linestyle=":", lw=1.2, alpha=0.75,
@@ -1050,7 +1060,7 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
 
     beta_re = reg["beta_re"]
     ax.plot(x_plot, y_plot_re, color="#1f4e78", linewidth=2.4 if is_standalone else 2.0, zorder=3,
-            label=f"REMR: ln(Y) = {beta_re[0]:.3f} + {beta_re[1]:.3f} ln(X)" if is_de else f"REMR: ln(Y) = {beta_re[0]:.3f} + {beta_re[1]:.3f} ln(X)")
+            label=f"REMR: ln(Y)={beta_re[0]:.2f}+{beta_re[1]:.2f} ln(X)" if is_de else f"REMR: ln(Y)={beta_re[0]:.2f}+{beta_re[1]:.2f} ln(X)")
 
     # 4. Scatter Plot of Studies with 95% Error Bars
     reg_df = df[df["is_register"] == 1]
@@ -1063,8 +1073,8 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
     reg_hi = reg_df["ci_95_upper"].to_numpy(dtype=float)
     ax.errorbar(reg_x, reg_y,
                 yerr=[reg_y - reg_lo, reg_hi - reg_y],
-                fmt="D", markersize=8.5 if is_standalone else 6.0, color="#d9534f", ecolor="#d9534f", elinewidth=1.5 if is_standalone else 1.2, capsize=4.0 if is_standalone else 3.0,
-                alpha=0.95, zorder=4, label="Amtliche Total-Register (SWE, NLD, NOR, DNK, FIN)" if is_de else "Official Total Population Registers (SWE, NLD, NOR, DNK, FIN)")
+                fmt="D", markersize=8.0 if is_standalone else 6.0, color="#d9534f", ecolor="#d9534f", elinewidth=1.5 if is_standalone else 1.2, capsize=4.0 if is_standalone else 3.0,
+                alpha=0.95, zorder=4, label="Total-Register (6 Staaten)" if is_de else "Official Registers (6 Nations)")
 
     # Surveys (Circles)
     surv_x = surv_df["precarity_ratio_x"].to_numpy(dtype=float)
@@ -1073,8 +1083,8 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
     surv_hi = surv_df["ci_95_upper"].to_numpy(dtype=float)
     ax.errorbar(surv_x, surv_y,
                 yerr=[surv_y - surv_lo, surv_hi - surv_y],
-                fmt="o", markersize=7.5 if is_standalone else 5.0, color="#1f4e78", ecolor="#1f4e78", elinewidth=1.5 if is_standalone else 1.2, capsize=4.0 if is_standalone else 3.0,
-                alpha=0.90, zorder=4, label="Kriminologische Längsschnitt-Kohorten (USA)" if is_de else "Criminological Longitudinal Cohorts (USA)")
+                fmt="o", markersize=7.0 if is_standalone else 5.0, color="#1f4e78", ecolor="#1f4e78", elinewidth=1.5 if is_standalone else 1.2, capsize=4.0 if is_standalone else 3.0,
+                alpha=0.90, zorder=4, label="Längsschnitt (3 Staaten)" if is_de else "Longitudinal (3 Nations)")
 
     # 5. Study Labels (Pure Longitudinal OECD Peer Cohorts - dynamically formatted from dataset columns)
     study_prefixes = {
@@ -1087,17 +1097,23 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
         "FIN_SARIASLAN_2021": "FIN: Sariaslan '21",
         "NOR_ANDERSEN_2017": "NOR: SSB 36 '17",
         "SWE_BRA_2021": "SWE: Brå 21:9 '21",
+        "FRA_SSMSI_2020": "FRA: SSMSI '20",
+        "GBR_MCARA_2022": "GBR: McAra '22",
+        "AUT_HOFINGER_2018": "AUT: Hofinger '18",
     }
     offsets = {
-        "SWE_SARIASLAN_2014": (10, -20) if is_standalone else (8, -16),
-        "USA_LOEBER_2012": (-25, 18) if is_standalone else (-20, 12),
-        "NOR_SKARDHAMAR_2012": (10, -20) if is_standalone else (8, -16),
-        "DNK_MOK_2018": (12, 6) if is_standalone else (8, 4),
-        "SWE_HAALLSTEN_2013": (12, 10) if is_standalone else (8, 8),
-        "NLD_JENNISSEN_2009": (12, 10) if is_standalone else (8, 8),
-        "FIN_SARIASLAN_2021": (12, -18) if is_standalone else (8, -14),
-        "NOR_ANDERSEN_2017": (12, -18) if is_standalone else (8, -14),
-        "SWE_BRA_2021": (12, 10) if is_standalone else (8, 8),
+        "SWE_BRA_2021": (8, 6),
+        "NOR_ANDERSEN_2017": (8, -14),
+        "SWE_SARIASLAN_2014": (8, -14),
+        "USA_LOEBER_2012": (-20, 10),
+        "FIN_SARIASLAN_2021": (8, 6),
+        "NOR_SKARDHAMAR_2012": (8, -14),
+        "AUT_HOFINGER_2018": (8, -14),
+        "DNK_MOK_2018": (8, 6),
+        "FRA_SSMSI_2020": (8, -8),
+        "GBR_MCARA_2022": (8, -14),
+        "SWE_HAALLSTEN_2013": (8, 8),
+        "NLD_JENNISSEN_2009": (8, 6),
     }
     for _, row in df.iterrows():
         sid = row["study_id"]
@@ -1107,10 +1123,10 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
         offset = offsets[sid] if sid in offsets else (8, 8)
         ax.annotate(lbl, (row["precarity_ratio_x"], row["crime_effect_ratio_y"]),
                     xytext=offset, textcoords="offset points",
-                    fontsize=7.8 if is_standalone else 6.2, fontweight="bold",
-                    bbox=dict(boxstyle="round,pad=0.18", fc="white", ec="gray", alpha=0.88, lw=0.6))
+                    fontsize=7.2 if is_standalone else 6.0, fontweight="bold",
+                    bbox=dict(boxstyle="round,pad=0.16", fc="white", ec="gray", alpha=0.88, lw=0.5))
 
-    # 5. German Projection Callout Box
+    # 5. German Projection Callout Box (Positioned at Top-Left with strictly constrained width)
     y_ses40 = proj["y_ses40_re"]
     y_d13 = proj["y_d13_re"]
     y_silc = proj["y_silc_re"]
@@ -1121,44 +1137,44 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
 
     if is_standalone:
         p_box_text = (
-            f"Projektion für Deutschland (OECD-REMR Metaregression, τ = {reg['tau']:.3f}):\n"
-            f"• Heterogenität: I² = {reg['i2_stat']:.1f}%, τ = {reg['tau']:.3f} | Q = {reg['q_stat']:.1f} (df={reg['df_q']}, p = {reg['p_q_stat']:.3f})\n"
-            f"• Länder-Sensitivität (Leave-One-Out): Ŷ in [{reg['loo_min']:.2f}×, {reg['loo_max']:.2f}×] (stabil über alle 6 Staaten)\n"
-            f"• Mikrozensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [95%-KI: {proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• Mikrozensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [95%-KI: {proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Zentralwert Panels G & I)\n"
-            f"• EU-SILC Armutsrisiko (X = {x_de_max:.2f}): Ŷ = {y_silc:.2f}× [95%-KI: {proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> Empirischer OECD-Kalibrierungskorridor (95%-KI): [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×], Zentralwert: {y_d13:.2f}×\n"
-            f"    (95%-Prognoseintervall über Korridor: [{pi_cor_lo:.2f}×–{pi_cor_hi:.2f}×])"
+            f"Projektion für Deutschland (OECD-REMR Metaregression):\n"
+            f"• Heterogenität: I² = {reg['i2_stat']:.1f}%, τ = {reg['tau']:.3f}, Q = {reg['q_stat']:.1f} (df={reg['df_q']})\n"
+            f"• Leave-One-Out: Ŷ in [{reg['loo_min']:.2f}×, {reg['loo_max']:.2f}×] (stabil über alle 9 Staaten)\n"
+            f"• Mikrozensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
+            f"• Mikrozensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Zentral)\n"
+            f"• EU-SILC Armutsrisiko (X = {x_de_max:.2f}): Ŷ = {y_silc:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
+            f"• OECD-Kalibrierungskorridor (95%-KI): [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×] (Zentral: {y_d13:.2f}×)"
             if is_de else
-            f"German Calibration Projection (OECD REMR Meta-Regression, τ = {reg['tau']:.3f}):\n"
-            f"• Heterogeneity: I² = {reg['i2_stat']:.1f}%, τ = {reg['tau']:.3f} | Q = {reg['q_stat']:.1f} (df={reg['df_q']}, p = {reg['p_q_stat']:.3f})\n"
-            f"• Country Sensitivity (Leave-One-Out): Ŷ in [{reg['loo_min']:.2f}×, {reg['loo_max']:.2f}×] (stable across all 6 nations)\n"
-            f"• Microcensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [95% CI: {proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• Microcensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [95% CI: {proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Central Value Panels G & I)\n"
-            f"• EU-SILC Poverty Risk (X = {x_de_max:.2f}): Ŷ = {y_silc:.2f}× [95% CI: {proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> Empirical OECD Calibration Corridor (95% CI): [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×], Central: {y_d13:.2f}×\n"
-            f"    (95% Prediction Interval across Corridor: [{pi_cor_lo:.2f}×–{pi_cor_hi:.2f}×])"
-        )
-        fs_box = 8.2
-    else:
-        p_box_text = (
-            f"Projektion Dt. (OECD-REMR, τ={reg['tau']:.3f}, I²={reg['i2_stat']:.0f}%):\n"
-            f"• SES < 40 (X={x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Zentral)\n"
-            f"• EU-SILC (X={x_de_max:.2f}): Ŷ = {y_silc:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> 95%-KI: [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×] | Leave-One-Out: [{reg['loo_min']:.2f}×–{reg['loo_max']:.2f}×]"
-            if is_de else
-            f"German Proj. (OECD REMR, τ={reg['tau']:.3f}, I²={reg['i2_stat']:.0f}%):\n"
-            f"• SES < 40 (X={x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
-            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Central)\n"
-            f"• EU-SILC (X={x_de_max:.2f}): Ŷ = {y_silc:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
-            f"==> 95% CI: [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×] | Leave-One-Out: [{reg['loo_min']:.2f}×–{reg['loo_max']:.2f}×]"
+            f"German Calibration Projection (OECD REMR Meta-Regression):\n"
+            f"• Heterogeneity: I² = {reg['i2_stat']:.1f}%, τ = {reg['tau']:.3f}, Q = {reg['q_stat']:.1f} (df={reg['df_q']})\n"
+            f"• Leave-One-Out: Ŷ in [{reg['loo_min']:.2f}×, {reg['loo_max']:.2f}×] (stable across all 9 nations)\n"
+            f"• Microcensus SES < 40 (X = {x_de_min:.2f}): Ŷ = {y_ses40:.2f}× [{proj['ci_ses40_lower']:.2f}–{proj['ci_ses40_upper']:.2f}×]\n"
+            f"• Microcensus D1–D3 (X = {x_de_d13:.2f}): Ŷ = {y_d13:.2f}× [{proj['ci_d13_lower']:.2f}–{proj['ci_d13_upper']:.2f}×] (Central)\n"
+            f"• EU-SILC Poverty Risk (X = {x_de_max:.2f}): Ŷ = {y_silc:.2f}× [{proj['ci_silc_lower']:.2f}–{proj['ci_silc_upper']:.2f}×]\n"
+            f"• OECD Calibration Corridor (95% CI): [{ci_cor_lo:.2f}×–{ci_cor_hi:.2f}×] (Central: {y_d13:.2f}×)"
         )
         fs_box = 6.8
+    else:
+        p_box_text = (
+            f"Projektion Dt. (OECD-REMR):\n"
+            f"• SES < 40 (X={x_de_min:.2f}): Ŷ={y_ses40:.2f}×\n"
+            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ={y_d13:.2f}× (Zentral)\n"
+            f"• EU-SILC (X={x_de_max:.2f}): Ŷ={y_silc:.2f}×\n"
+            f"• 95%-KI: [{ci_cor_lo:.2f}–{ci_cor_hi:.2f}×]\n"
+            f"• Leave-1-Out: [{reg['loo_min']:.2f}–{reg['loo_max']:.2f}×]"
+            if is_de else
+            f"German Proj. (OECD REMR):\n"
+            f"• SES < 40 (X={x_de_min:.2f}): Ŷ={y_ses40:.2f}×\n"
+            f"• D1–D3 (X={x_de_d13:.2f}): Ŷ={y_d13:.2f}× (Central)\n"
+            f"• EU-SILC (X={x_de_max:.2f}): Ŷ={y_silc:.2f}×\n"
+            f"• 95% CI: [{ci_cor_lo:.2f}–{ci_cor_hi:.2f}×]\n"
+            f"• Leave-1-Out: [{reg['loo_min']:.2f}–{reg['loo_max']:.2f}×]"
+        )
+        fs_box = 6.2
 
-    ax.text(0.03, 0.96, p_box_text, transform=ax.transAxes, va="top", ha="left",
+    ax.text(0.02, 0.98, p_box_text, transform=ax.transAxes, va="top", ha="left",
             fontsize=fs_box, fontweight="bold",
-            bbox=dict(boxstyle="round,pad=0.25", fc="#FFF9C4", ec="#FBC02D", lw=1.1))
+            bbox=dict(boxstyle="round,pad=0.22", fc="#FFF9C4", ec="#FBC02D", lw=1.0))
 
     # Axis formatting
     num_studies = len(df)
@@ -1175,8 +1191,8 @@ def render_panel_f_oecd_regression(ax, reg, lang="de", is_standalone=False):
     ax.set_ylabel("Gewaltkriminalitäts-Effektverhältnis (Y = RR, HR, OR, IRR)" if is_de else "Violent Crime Effect Ratio (Y = RR, HR, OR, IRR)", fontsize=9.2 if is_standalone else 8.2)
 
     ax.set_xlim(2.0, 3.8)
-    ax.set_ylim(1.8, 3.85)
-    ax.legend(loc="lower right", fontsize=7.8 if is_standalone else 6.0, frameon=True, facecolor="white", framealpha=0.92)
+    ax.set_ylim(1.30, 4.35)
+    ax.legend(loc="lower right", fontsize=7.2 if is_standalone else 5.8, frameon=True, facecolor="white", framealpha=0.92)
 
 
 def render_panel_g_risk_matrix(ax, m, lang="de", is_standalone=False, fig=None):
@@ -1292,13 +1308,28 @@ def render_bka_register_waterfall_panel(ax, wf, lang="de", is_standalone=False, 
         ylabel = "TVBZ (Verdächtige pro 100.000 Männer 14+)"
         ci_lo = wf["ci_std_lo"]
         ci_hi = wf["ci_std_hi"]
-        ann_text = f"Verbleibende Hellfelddisparität: {wf['ratio_std']:.2f}× [95%-KI: {ci_lo:.2f}–{ci_hi:.2f}]\n(+{((wf['ratio_std'] - 1.0) * 100):.0f} % über Basis; PKS erfasst keinen SES)\n→ Prekaritätskontrolle: siehe Panel F & I"
-        rr_lo = wf["rr_proj_lo"]
-        rr_hi = wf["rr_proj_hi"]
-        disclaimer = (
-            f"Registergrenze (Hellfeld): Amtliche Kriminalstatistik erfasst Tatverdächtige, kein Dunkelfeld und keinen SES.\n"
-            f"Die {wf['ratio_std']:.2f}×-Registerdisparität [95%-KI: {ci_lo:.2f}–{ci_hi:.2f}] wird durch OECD-Prekaritätskontrolle (Panels F & I: {rr_lo:.2f}×–{rr_hi:.2f}×) dekonstruiert.\n"
-            f"• Shapley-Effektattribution (Pfadunabhängig): Demografie/Alter = {wf['shapley_demo_pct']:.1f}% (–{wf['shapley_demo']:.1f}), Residenz = {wf['shapley_res_pct']:.1f}% (–{wf['shapley_res']:.1f})"
+        ann_text = (
+            f"Hellfelddisparität (PKS):\n"
+            f"• {wf['ratio_std']:.2f}× [95%-KI: {ci_lo:.2f}–{ci_hi:.2f}]\n"
+            f"• +{((wf['ratio_std'] - 1.0) * 100):.0f}% über Basis\n"
+            f"• PKS erfasst keinen SES\n"
+            f"→ Prekarität: vgl. Panels F & I"
+        ) if is_standalone else (
+            f"Hellfelddisparität:\n"
+            f"• {wf['ratio_std']:.2f}× [{ci_lo:.2f}–{ci_hi:.2f}]\n"
+            f"• +{((wf['ratio_std'] - 1.0) * 100):.0f}% über Basis\n"
+            f"• Prekarität: vgl. F & I"
+        )
+        shapley_text = (
+            f"Shapley-Dekomposition (Pfadunabhängig):\n"
+            f"• Demografie/Alter: {wf['shapley_demo_pct']:.1f}% (–{wf['shapley_demo']:.1f})\n"
+            f"• Residenz (Nenner): {wf['shapley_res_pct']:.1f}% (–{wf['shapley_res']:.1f})\n"
+            f"• Registergrenze: Amtliche PKS ohne SES"
+        ) if is_standalone else (
+            f"Shapley-Zerlegung:\n"
+            f"• Alter: {wf['shapley_demo_pct']:.0f}% (–{wf['shapley_demo']:.0f})\n"
+            f"• Residenz: {wf['shapley_res_pct']:.0f}% (–{wf['shapley_res']:.0f})\n"
+            f"Register ohne SES"
         )
     else:
         stages = [
@@ -1312,13 +1343,28 @@ def render_bka_register_waterfall_panel(ax, wf, lang="de", is_standalone=False, 
         ylabel = "TVBZ (Suspects per 100,000 Males 14+)"
         ci_lo = wf["ci_std_lo"]
         ci_hi = wf["ci_std_hi"]
-        ann_text = f"Residual Register Disparity: {wf['ratio_std']:.2f}× [95% CI: {ci_lo:.2f}–{ci_hi:.2f}]\n(+{((wf['ratio_std'] - 1.0) * 100):.0f} %; PKS lacks SES/reporting)\n→ Precarity Control: see Panels F & I"
-        rr_lo = wf["rr_proj_lo"]
-        rr_hi = wf["rr_proj_hi"]
-        disclaimer = (
-            f"Register Boundary (Hellfeld): Official police statistics measure suspects, not darkfield crimes or SES.\n"
-            f"Residual {wf['ratio_std']:.2f}× disparity [95% CI: {ci_lo:.2f}–{ci_hi:.2f}] is deconstructed by OECD precarity control (Panels F & I: {rr_lo:.2f}×–{rr_hi:.2f}×).\n"
-            f"• Shapley Attribution (Path-Independent): Demography/Age = {wf['shapley_demo_pct']:.1f}% (–{wf['shapley_demo']:.1f}), Residence = {wf['shapley_res_pct']:.1f}% (–{wf['shapley_res']:.1f})"
+        ann_text = (
+            f"Register Disparity (PKS):\n"
+            f"• {wf['ratio_std']:.2f}× [95% CI: {ci_lo:.2f}–{ci_hi:.2f}]\n"
+            f"• +{((wf['ratio_std'] - 1.0) * 100):.0f}% vs. Baseline\n"
+            f"• PKS lacks SES/darkfield\n"
+            f"→ Precarity: see Panels F & I"
+        ) if is_standalone else (
+            f"Register Disparity:\n"
+            f"• {wf['ratio_std']:.2f}× [{ci_lo:.2f}–{ci_hi:.2f}]\n"
+            f"• +{((wf['ratio_std'] - 1.0) * 100):.0f}% vs. Base\n"
+            f"• Precarity: see F & I"
+        )
+        shapley_text = (
+            f"Shapley Decomposition (Path-Independent):\n"
+            f"• Demography/Age: {wf['shapley_demo_pct']:.1f}% (–{wf['shapley_demo']:.1f})\n"
+            f"• Residence (Denominator): {wf['shapley_res_pct']:.1f}% (–{wf['shapley_res']:.1f})\n"
+            f"• Register Boundary: PKS lacks SES"
+        ) if is_standalone else (
+            f"Shapley Attribution:\n"
+            f"• Age: {wf['shapley_demo_pct']:.0f}% (–{wf['shapley_demo']:.0f})\n"
+            f"• Residence: {wf['shapley_res_pct']:.0f}% (–{wf['shapley_res']:.0f})\n"
+            f"Register lacks SES"
         )
 
     colors = ["#d9534f", "#e67e22", "#f39c12", "#27ae60", "#1f4e78"]
@@ -1347,24 +1393,28 @@ def render_bka_register_waterfall_panel(ax, wf, lang="de", is_standalone=False, 
             basis_lbl = "(Basis)" if is_de else "(Baseline)"
             ax.text(bar.get_x() + bar.get_width() / 2, b + h / 2, f"{h:.1f}\n{basis_lbl}", ha="center", va="center", color="white", fontweight="bold", fontsize=fs_val)
 
-    xy_text_pos = (1.2, 920) if not is_standalone else (1.4, 980)
+    # Repositioned annotation callout box in upper right (strictly above Bars 3 & 4)
     ax.annotate(
         ann_text,
-        xy=(3, wf['comb_nde']), xytext=xy_text_pos,
-        arrowprops=dict(facecolor="darkblue", shrink=0.08, width=1.3, headwidth=5),
-        fontweight="bold", fontsize=7.2 if not is_standalone else 9.5, color="#0d47a1",
-        bbox=dict(boxstyle="round,pad=0.3", fc="#e3f2fd", ec="#1565c0", lw=1.2)
+        xy=(3, wf['comb_nde']), xytext=(4.40 if is_standalone else 4.35, 1180),
+        ha="right", va="center",
+        arrowprops=dict(facecolor="darkblue", shrink=0.08, width=1.5 if is_standalone else 1.2, headwidth=6 if is_standalone else 4),
+        fontweight="bold", fontsize=8.0 if is_standalone else 6.3, color="#0d47a1",
+        bbox=dict(boxstyle="round,pad=0.25", fc="#e3f2fd", ec="#1565c0", lw=1.1)
     )
+
+    # Repositioned Shapley decomposition box in the empty waterfall drop void (under Bars 1 & 2)
+    ax.text(1.5, 430, shapley_text, ha="center", va="center",
+            fontsize=7.4 if is_standalone else 6.3, fontweight="bold",
+            color="#37474F",
+            bbox=dict(boxstyle="round,pad=0.22", fc="#FFFDE7", ec="#FBC02D", lw=0.9))
 
     ax.set_xticks(x_pos)
     ax.set_xticklabels(stages, fontsize=7.2 if not is_standalone else 9.5, fontweight="bold")
     ax.set_ylabel(ylabel, fontsize=8.8 if not is_standalone else 10.5)
     ax.set_title(title, fontsize=9.2 if not is_standalone else 12.0, fontweight="bold")
     ax.set_ylim(0, 1400)
-
-    fs_box = 6.4 if not is_standalone else 8.0
-    ax.text(0.5, 0.025, disclaimer, transform=ax.transAxes, ha="center", fontsize=fs_box, style="italic",
-            color="#37474F", bbox=dict(boxstyle="round,pad=0.25", fc="#FFFDE7", ec="#FBC02D", lw=0.9))
+    ax.set_xlim(-0.6, 4.6)
 
 
 def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
@@ -1377,8 +1427,8 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
     and precarity-controlled Non-German curve with the OECD precarity sensitivity band (strictly limited to ages 14–30).
     """
     is_de = (lang == "de")
-    dense_ages = np.linspace(14, 80, 250)
-    dense_ages_youth = np.linspace(14, 30, 150)
+    dense_ages = np.linspace(0, 80, 400)
+    dense_ages_youth = np.linspace(14, 30, 160)
 
     fit_de = m["age_crime_func"](dense_ages, *m["popt_de"])
     fit_nde_raw = m["age_crime_func"](dense_ages, *m["popt_nde_raw"])
@@ -1402,10 +1452,10 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
     fit_nde_std_band_lo = fit_nde_res_youth / cf_ses_hi
     fit_nde_std_band_hi = fit_nde_res_youth / cf_ses_lo
 
-    # 1. German baseline
+    # 1. German baseline across full life course (Ages 0–80)
     lbl_de = "Deutsche Männer (BKA T40 / BV-01)" if is_de else "German Males (BKA T40 / BV-01)"
     ax.plot(dense_ages, fit_de, label=lbl_de, color=C_DE, lw=2.4 if is_standalone else 2.0, linestyle="--")
-    ax.scatter(m["emp_ages"], m["emp_de"], color=C_DE, s=40 if is_standalone else 25, zorder=5)
+    ax.scatter(m["emp_ages_full"], m["emp_rates_full"], color=C_DE, s=40 if is_standalone else 25, zorder=5)
 
     # 2. Raw Non-German
     lbl_nde_raw = "Nicht-Dt. Männer ROH (BKA T50 / AZR)" if is_de else "Non-German Males RAW (BKA T50 / AZR)"
@@ -1432,9 +1482,10 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
     )
     ax.plot(dense_ages_youth, fit_nde_std_mid, label=lbl_std, color="#8e44ad", lw=2.6 if is_standalone else 2.1, linestyle="-", zorder=4)
 
-    # Peak values at age 17.5
-    peak_idx = np.abs(dense_ages - 17.5).argmin()
-    peak_idx_y = np.abs(dense_ages_youth - 17.5).argmin()
+    # Peak values at age 16.0 (empirical midpoint of the BKA 14–18 youth cohort)
+    eval_age = 16.0
+    peak_idx = np.abs(dense_ages - eval_age).argmin()
+    peak_idx_y = np.abs(dense_ages_youth - eval_age).argmin()
     peak_raw = fit_nde_raw[peak_idx]
     peak_res = fit_nde_res[peak_idx]
     peak_std_mid = fit_nde_std_mid[peak_idx_y]
@@ -1442,20 +1493,33 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
     peak_std_hi = fit_nde_std_band_hi[peak_idx_y]
     peak_de = fit_de[peak_idx]
 
+    peak_ratio = peak_std_mid / peak_de
+    peak_ratio_de = f"{peak_ratio:.2f}".replace(".", ",")
+    peak_ratio_en = f"{peak_ratio:.2f}"
+
+    rr_c = float(m["rr_ctrl_central"])
+    p_d13_de = 0.233
+    p_d13_nde = 0.615
+    cf_0pov_de = 1.0 + p_d13_de * (rr_c - 1.0)
+    cf_0pov_nde = 1.0 + p_d13_nde * (rr_c - 1.0)
+    base_dt_0pov = peak_de / cf_0pov_de
+    base_ndt_0pov = peak_res / cf_0pov_nde
+    cf_base_de_str = f"{cf_0pov_de:.2f}".replace(".", ",") if is_de else f"{cf_0pov_de:.2f}"
+
     if is_standalone:
         ax.annotate(
-            f"Peak Jugend (16–18 J.):\n"
+            f"Peak Jugend (14–18 J., Mitte 16 J.):\n"
             f"• Nicht-Dt. Roh: {peak_raw:.0f} (3,38×)\n"
             f"• Wohnsitzbereinigt (–{res_drop_de}%): {peak_res:.0f} (2,91×)\n"
-            f"• SES-standardisiert (CF={cf_ses_de}×): {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}] (2,03×)\n"
+            f"• SES-standardisiert (CF={cf_ses_de}×): {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}] ({peak_ratio_de}×)\n"
             f"• Dt. Referenzbasis: {peak_de:.0f} (1,00×)"
             if is_de else
-            f"Peak Youth (16–18 Y.):\n"
+            f"Peak Youth (14–18 Y., Midpoint 16 Y.):\n"
             f"• Non-Ger. Raw: {peak_raw:.0f} (3.38×)\n"
             f"• Residence-Adj. (–{res_drop_pct:.1f}%): {peak_res:.0f} (2.91×)\n"
-            f"• SES-Standardized (CF={cf_ses_central:.2f}×): {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}] (2.03×)\n"
+            f"• SES-Standardized (CF={cf_ses_central:.2f}×): {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}] ({peak_ratio_en}×)\n"
             f"• German Reference Base: {peak_de:.0f} (1.00×)",
-            xy=(17.5, peak_std_mid), xytext=(28, 2550),
+            xy=(eval_age, peak_std_mid), xytext=(28, 2550),
             arrowprops=dict(facecolor="#8e44ad", shrink=0.08, width=1.3, headwidth=5),
             color="#5e2d79", fontweight="bold", fontsize=8.6,
             bbox=dict(boxstyle="round,pad=0.3", fc="#f3e5f5", ec="#8e44ad", lw=1.2)
@@ -1463,18 +1527,18 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
         ax.text(
             0.5, 0.03,
             "Synthese Register & Demografische Standardisierung (Prekaritätskontrolle 14–30 J.):\n"
-            f"1. SES-Standardisierung (61,5% → 23,3% Armut, CF={cf_ses_de}× [95%-KI: {cf_lo_de}×–{cf_hi_de}×]): Senkt den Peak von {peak_res:.0f} auf ~{peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}], Disparität: 2,03×.\n"
-            f"2. Residueller Abstand (2,03×): Vollständig überbrückt durch Dunkelfeld-Anzeigebias (1,50×–2,32×, Pfeiffer 2018) & Strukturmediatoren (Sammelunterkünfte, Arbeitsverbote).\n"
-            f"Symmetrie-Hinweis: Eine hypothetische Korrektur beider Gruppen auf 0% Armut senkt beide Baselines um 1,36× (Dt. 858, Nicht-Dt. 1.745), Disparität bleibt exakt 2,03×.",
+            f"1. SES-Standardisierung (61,5% → 23,3% Armut, CF={cf_ses_de}× [95%-KI: {cf_lo_de}×–{cf_hi_de}×]): Senkt den Peak von {peak_res:.0f} auf ~{peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}], Disparität: {peak_ratio_de}×.\n"
+            f"2. Residueller Abstand ({peak_ratio_de}×): Vollständig überbrückt durch Dunkelfeld-Anzeigebias (1,50×–2,32×, Pfeiffer 2018) & Strukturmediatoren (Sammelunterkünfte, Arbeitsverbote).\n"
+            f"Symmetrie-Hinweis: Eine hypothetische Korrektur beider Gruppen auf 0% Armut senkt beide Baselines um {cf_base_de_str}× (Dt. {base_dt_0pov:.0f}, Nicht-Dt. {base_ndt_0pov:.0f}), Disparität bleibt exakt {peak_ratio_de}×.",
             transform=ax.transAxes, ha="center", fontsize=7.2, style="italic",
             color="#37474F", bbox=dict(boxstyle="round,pad=0.25", fc="#ECEFF1", ec="#B0BEC5", lw=0.8)
         )
     else:
         ax.annotate(
-            f"SES-Standardisierung (14–30 J.):\nPeak {peak_res:.0f} ==> {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}]\n(Dt. Basis: {peak_de:.0f} | Ratio: 2,03×)"
+            f"SES-Standardisierung (14–30 J.):\nPeak {peak_res:.0f} ==> {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}]\n(Dt. Basis: {peak_de:.0f} | Ratio: {peak_ratio_de}×)"
             if is_de else
-            f"SES-Standardization (14–30 Y.):\nPeak {peak_res:.0f} ==> {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}]\n(German Base: {peak_de:.0f} | Ratio: 2.03×)",
-            xy=(17.5, peak_std_mid), xytext=(27, 2450),
+            f"SES-Standardization (14–30 Y.):\nPeak {peak_res:.0f} ==> {peak_std_mid:.0f} [{peak_std_lo:.0f}–{peak_std_hi:.0f}]\n(German Base: {peak_de:.0f} | Ratio: {peak_ratio_en}×)",
+            xy=(eval_age, peak_std_mid), xytext=(27, 2450),
             arrowprops=dict(facecolor="#8e44ad", shrink=0.08, width=1.1, headwidth=4),
             color="#5e2d79", fontweight="bold", fontsize=6.8,
             bbox=dict(boxstyle="round,pad=0.20", fc="#f3e5f5", ec="#8e44ad", lw=1.0)
@@ -1490,7 +1554,8 @@ def render_panel_i_age_crime(ax, m, lang="de", is_standalone=False):
     ax.set_title(title, fontweight="bold", fontsize=10.0 if is_standalone else 8.8)
     ax.set_xlabel("Alter in Jahren" if is_de else "Age in Years", fontsize=9.5 if is_standalone else 8.5)
     ax.set_ylabel("TVBZ (Verdächtige pro 100.000 Männer)" if is_de else "TVBZ (Suspects per 100k Males)", fontsize=9.5 if is_standalone else 8.5)
-    ax.set_ylim(0, 4600)
+    ax.set_xlim(0, 80)
+    ax.set_ylim(0, 4800)
     ax.legend(loc="upper right", fontsize=7.6 if is_standalone else 6.2, framealpha=0.92)
 
 
@@ -1619,7 +1684,11 @@ def generate_composite_matrix_de(m):
     render_panel_i_age_crime(axes[2, 2], m, lang="de", is_standalone=False)
 
     rr_ctrl = m["rr_ctrl_central"]
-    plt.figtext(0.01, 0.004, f"Survey-Metasynthese amtlicher Register (BKA PKS 2023 Schlüssel 892000, T20, T29, T40, T50; Destatis Zensus 2022) & kriminologischer Surveys (EU-SILC, Mikrozensus, OECD-Längsschnittkohorten).\nMethodischer Hinweis: Panel E ist der eigene Beitrag (Kettenregel & Fréchet-Schranken). Panel F kalibriert die Prekaritätselastizität über OECD-REMR (I²={m['oecd_reg']['i2_stat']:.0f}%). Panel G modelliert das Alter×SES-Risikofeld (Theoretische Modellkalibrierung R(Alter, SES) mit OECD-Zentralwert {rr_ctrl:.2f}×). Panel H zeigt die amtliche BKA-Registerdekomposition (Shapley: Alter 52%, Residenz 48%), Panel I die demografische SES-Standardisierung (CF={m['cf_ses_central']:.2f}× [{m['cf_ses_lo']:.2f}×–{m['cf_ses_hi']:.2f}×], Rest 2,03× durch Dunkelfeld erklärt; 14–30 J.).", fontsize=8.5, style="italic", ha="left")
+    peak_de_val = m["age_crime_func"](np.array([16.0]), *m["popt_de"])[0]
+    peak_res_val = m["age_crime_func"](np.array([16.0]), *m["popt_nde_res"])[0]
+    peak_ratio_val = (peak_res_val / float(m["cf_ses_central"])) / peak_de_val
+    peak_ratio_de = f"{peak_ratio_val:.2f}".replace(".", ",")
+    plt.figtext(0.01, 0.004, f"Survey-Metasynthese amtlicher Register (BKA PKS 2023 Schlüssel 892000, T20, T29, T40, T50; Destatis Zensus 2022) & kriminologischer Surveys (EU-SILC, Mikrozensus, OECD-Längsschnittkohorten).\nMethodischer Hinweis: Panel E ist der eigene Beitrag (Kettenregel & Fréchet-Schranken). Panel F kalibriert die Prekaritätselastizität über OECD-REMR (I²={m['oecd_reg']['i2_stat']:.0f}%). Panel G modelliert das Alter×SES-Risikofeld (Theoretische Modellkalibrierung R(Alter, SES) mit OECD-Zentralwert {rr_ctrl:.2f}×). Panel H zeigt die amtliche BKA-Registerdekomposition (Shapley: Alter 52%, Residenz 48%), Panel I die demografische SES-Standardisierung (CF={m['cf_ses_central']:.2f}× [{m['cf_ses_lo']:.2f}×–{m['cf_ses_hi']:.2f}×], Rest {peak_ratio_de}× durch Dunkelfeld erklärt; 14–30 J.).", fontsize=8.5, style="italic", ha="left")
     plt.tight_layout(rect=[0, 0.025, 1, 0.965])
 
     p_de = os.path.join(PLOTS_DIR, "bka_kriminalitaet_3x3_deutsch.png")
@@ -1728,7 +1797,11 @@ def generate_composite_matrix_en(m):
     render_panel_i_age_crime(axes[2, 2], m, lang="en", is_standalone=False)
 
     rr_ctrl = m["rr_ctrl_central"]
-    plt.figtext(0.01, 0.004, f"Survey meta-synthesis of official registers (BKA PKS Key 892000, T20, T29, T40, T50; Destatis Census 2022) & criminological surveys (EU-SILC, Microcensus, OECD Longitudinal Cohorts).\nMethodological Note: Panel E is the novel contribution (chain rule & Fréchet bounds). Panel F calibrates the precarity elasticity via OECD REMR (I²={m['oecd_reg']['i2_stat']:.0f}%). Panel G models the Age×SES risk surface (Theoretical model calibration R(Age, SES) with OECD central estimate {rr_ctrl:.2f}×). Panel H displays the official BKA register decomposition (Shapley: Age 52%, Residence 48%), Panel I the demographic SES standardization (CF={m['cf_ses_central']:.2f}× [{m['cf_ses_lo']:.2f}×–{m['cf_ses_hi']:.2f}×], residual 2.03× explained by darkfield; ages 14–30).", fontsize=8.5, style="italic", ha="left")
+    peak_de_val = m["age_crime_func"](np.array([16.0]), *m["popt_de"])[0]
+    peak_res_val = m["age_crime_func"](np.array([16.0]), *m["popt_nde_res"])[0]
+    peak_ratio_val = (peak_res_val / float(m["cf_ses_central"])) / peak_de_val
+    peak_ratio_en = f"{peak_ratio_val:.2f}"
+    plt.figtext(0.01, 0.004, f"Survey meta-synthesis of official registers (BKA PKS Key 892000, T20, T29, T40, T50; Destatis Census 2022) & criminological surveys (EU-SILC, Microcensus, OECD Longitudinal Cohorts).\nMethodological Note: Panel E is the novel contribution (chain rule & Fréchet bounds). Panel F calibrates the precarity elasticity via OECD REMR (I²={m['oecd_reg']['i2_stat']:.0f}%). Panel G models the Age×SES risk surface (Theoretical model calibration R(Age, SES) with OECD central estimate {rr_ctrl:.2f}×). Panel H displays the official BKA register decomposition (Shapley: Age 52%, Residence 48%), Panel I the demographic SES standardization (CF={m['cf_ses_central']:.2f}× [{m['cf_ses_lo']:.2f}×–{m['cf_ses_hi']:.2f}×], residual {peak_ratio_en}× explained by darkfield; ages 14–30).", fontsize=8.5, style="italic", ha="left")
     plt.tight_layout(rect=[0, 0.025, 1, 0.965])
 
     p_en = os.path.join(PLOTS_DIR, "bka_crime_disparity_9panel_english.png")

@@ -31,6 +31,18 @@ Every $3 \times 3$ synoptic matrix follows a rigorous three-row analytical progr
    * Shaded regime or risk zones (`ax.axvspan`, `ax.add_patch(Rectangle(...))`) highlighting structural breaks, crisis windows, or high-efficiency regimes.
    * Explicit uncertainty quantification: error bars (`yerr`), 95% confidence bands (`fill_between`), or Fréchet/sensitivity bounds on every inferential panel.
    * Comprehensive figure footnote (`plt.figtext`) citing exact data tables, time horizons, and methodological notes.
+3. **Path-Independent Shapley Waterfall Decomposition**:
+   * In sequential waterfalls (e.g., Panel H or I), the sequence of adjustments is inherently order-dependent. For $K$ factors, evaluate all $K!$ permutations and compute the Shapley attribution:
+     $$\phi_j = \frac{1}{K!} \sum_{\pi} \Delta_j(\pi)$$
+   * Report the primary pedagogical sequence on the bars and the Shapley values in an explanatory footnote or inset box.
+4. **Exact Marginal Conservation on 2D Surfaces**:
+   * Any 2D surface $R(X_1, X_2)$ must conserve empirical marginals along slices:
+     $$\frac{1}{100} \int_{0}^{100} R(x_1, s) \, ds \equiv Y_{\text{empirical}}(x_1)$$
+     Enforce this via runtime assertion: `assert np.max(np.abs(actual_marginal - expected_marginal)) < 1e-10`.
+5. **Scope-Restricted Extrapolation**:
+   * Counterfactual sensitivity bands or standardized curves derived from external empirical literature must be clipped strictly to the domain supported by evidence (e.g., restricting precarity adjustments strictly to ages 14–30).
+6. **Dual-Mode Rendering (`is_standalone=True` vs. `False`)**:
+   * Modularize panel renderers (`render_panel_x(ax, data, lang="de", is_standalone=False)`) to support both standalone exports (`figsize=(8, 6)`, larger typography and detailed callout boxes) and 3x3 composite matrices (`figsize=(18, 15)`, compact typography) with zero code duplication. Support internationalization (`lang="de"` and `lang="en"`).
 
 ---
 

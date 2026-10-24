@@ -146,7 +146,7 @@ Special emphasis is placed on the **joint distribution of Age $\times$ Socioecon
 
 ## 4. Cross-National OECD Precarity Meta-Regression Corpus (`literature/oecd_precarity_crime_meta.csv`)
 
-Curated cross-national empirical dataset pairing empirical precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 9 landmark longitudinal and total-population register studies from 6 OECD peer nations ($N = 16,052,606$ individuals), strictly restricted to young adulthood violent offending careers (ages 14–33):
+Curated cross-national empirical dataset pairing empirical precarity disparity ratios ($X_i$) against violent crime effect ratios ($Y_i$) across 12 landmark longitudinal and total-population register studies from 9 OECD peer nations ($N = 17,909,254$ individuals), strictly restricted to young adulthood violent offending careers (ages 14–35):
 
 | Study ID | Nation | Cohort Design & Sample Size ($N$) | Offending Age Window | Precarity Indicator ($X$) | Precarity Ratio ($X$) | Violent Crime Effect Metric ($Y$) | Effect Ratio ($Y$ [95% CI]) | Primary Source Document |
 |:---|:---:|:---|:---:|:---|:---:|:---|:---:|:---|
@@ -159,15 +159,18 @@ Curated cross-national empirical dataset pairing empirical precarity disparity r
 | `FIN_SARIASLAN_2021` | Finland | Nationwide register IJE ($N = 650,680$) | Ages 15–30 | Lowest childhood family income quintile | $2.70\times$ | Hazard Ratio (HR) | $2.52\times$ [$2.38, 2.67$] | [`literature/Sariaslan_2021_IJE_Childhood_Family_Income_Violent_Crime_Finland.pdf`](./Sariaslan_2021_IJE_Childhood_Family_Income_Violent_Crime_Finland.pdf) |
 | `DNK_MOK_2018` | Denmark | Danish Civil Registration System ($N = 1,048,527$) | Ages 15–33 | Lowest parental income quintile | $3.00\times$ | Incidence Rate Ratio (IRR) | $2.90\times$ [$2.50, 3.36$] | [`literature/Mok_2018_Lancet_Public_Health_Extract.pdf`](./Mok_2018_Lancet_Public_Health_Extract.pdf) |
 | `USA_LOEBER_2012` | USA | Pittsburgh Youth Study (PYS) ($N = 1,517$) | Ages 14–30 | Chronic low family income / poverty | $2.65\times$ | Relative Risk (RR) | $2.45\times$ [$1.98, 3.03$] | [`literature/Loeber_Farrington_2012_Juvenile_To_Adult_Offending.pdf`](./Loeber_Farrington_2012_Juvenile_To_Adult_Offending.pdf) |
+| `FRA_SSMSI_2020` | France | National administrative register ($N \approx 1,850,000$) | Ages 14–30 | Priority Neighborhoods (QPV) poverty | $3.00\times$ | Relative Risk (RR) | $3.80\times$ [$3.65, 3.96$] | [`literature/SSMSI_2020_Interstats_Analyse_30_QPV_Delinquance_France.pdf`](./SSMSI_2020_Interstats_Analyse_30_QPV_Delinquance_France.pdf) |
+| `GBR_MCARA_2022` | United Kingdom | Edinburgh Study of Youth Transitions ($N = 4,300$) | Ages 16–35 | Low family SES / persistent poverty | $3.13\times$ | Odds Ratio (OR) | $2.40\times$ [$1.55, 3.72$] | [`literature/McAra_McVie_2022_ESYTC_Adult_Convictions_Extract.pdf`](./McAra_McVie_2022_ESYTC_Adult_Convictions_Extract.pdf) |
+| `AUT_HOFINGER_2018` | Austria | IRKS youth/young adult trajectory cohort ($N = 2,348$) | Ages 14–25 | Precarity / unstable employment | $2.88\times$ | Relative Risk (RR) | $2.04\times$ [$1.74, 2.39$] | [`literature/Hofinger_2018_IRKS_Legalbiografien_Extract.pdf`](./Hofinger_2018_IRKS_Legalbiografien_Extract.pdf) |
 
 **DerSimonian-Laird Random-Effects Meta-Regression Summary**:
-- $Q = 34.08, df = 7, p < 0.0001, \tau^2 = 0.0054, \tau = 0.0736, I^2 = 79.5\%$.
-- Log-linear model: $\ln(Y) = 0.631 + 0.308 \cdot \ln(X)$.
-- German projection corridor: $[2.15\times, 2.82\times]$ (central estimate $\mathbf{2.53\times}$ at D1–D3; 95% Prediction Interval: $[1.95\times, 3.15\times]$).
-- Jackknife leave-one-country-out stability range: $[2.48\times, 2.58\times]$.
+- $Q = 232.41, df = 10, p < 0.0001, \tau^2 = 0.0328, \tau = 0.1812, I^2 = 95.7\%$.
+- Log-linear model: $\ln(Y) = 0.5423 + 0.4030 \cdot \ln(X)$.
+- German projection corridor: $[2.23\times, 2.90\times]$ (central estimate $\mathbf{2.54\times}$ at D1–D3; 95% Prediction Interval: $[1.66\times, 3.89\times]$).
+- Jackknife leave-one-country-out stability range: $[2.48\times, 2.60\times]$.
 
 **Causal Nuance & Sibling Fixed-Effects Attenuation (Sariaslan et al. 2014, 2021)**:
-- The effect ratios ($Y_i \approx 2.34\text{--}3.10\times$) in this meta-regression represent **macro-observational population disparities**. Youth growing up in low-income or welfare-dependent households exhibit more than double the observed rate of violent crime convictions.
+- The effect ratios ($Y_i \approx 2.04\text{--}3.80\times$) in this meta-regression represent **macro-observational population disparities**. Youth growing up in low-income or welfare-dependent households exhibit more than double the observed rate of violent crime convictions.
 - However, rigorous sibling-comparison studies (notably Sariaslan et al. 2014 in Sweden and Sariaslan et al. 2021 in Finland) demonstrate that within-family discordant sibling models attenuate the hazard ratio for family income substantially (attenuating from $HR \approx 2.42\text{--}2.52$ at the population level to $HR \approx 1.10\text{--}1.12$, virtually null).
 - This vital distinction demonstrates that pure monetary income is an **empirical index/proxy of clustered structural disadvantage** (school segregation, labor market barriers, housing instability, intergenerational capital deficits, discriminatory policing) rather than an isolated mechanical lever that can be adjusted in isolation.
 - Accordingly, the OECD meta-regression models the **aggregate population risk gradient** associated with socioeconomic stratification, and must not be misinterpreted as an unconfounded guarantee that isolated income transfers alone would eliminate delinquency.

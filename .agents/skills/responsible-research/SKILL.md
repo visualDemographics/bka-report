@@ -74,18 +74,25 @@ $$\text{goal} \longrightarrow \text{literature} \longrightarrow \text{rawdata} \
 
 ### Bad Statistical Practices:
 * **P-hacking & HARKing**: Testing multiple ad-hoc covariate combinations or functional forms until a desired $p$-value or ratio appears.
+* **The Null-Hypothesis Parity Fallacy (Absence of Evidence $\neq$ Evidence of Absence)**: Never claim that two groups or policies exhibit "no disparity", "identical outcomes", or "complete convergence" merely because a regression coefficient or group dummy has $p > 0.05$. A statistically non-significant result only fails to reject the null; it does not prove parity. Whenever claiming equivalence under controlled conditions, conduct formal **Two One-Sided Tests (TOST)** against explicit equivalence margins ($\pm \Delta$).
 * **Building joint distributions from independent marginals**: Assuming $P(A \cap B \cap C) = P(A) \cdot P(B) \cdot P(C)$ when structural variables (e.g., capital investment, labor productivity, institutional scale, socio-economic factors) are correlated.
+* **Fixed-Effects Dominance Fallacy in Cross-Entity Meta-Analysis**: When pooling effect sizes across jurisdictions or studies with sample sizes varying by orders of magnitude (e.g., $N = 10^3$ surveys alongside $N = 8 \cdot 10^6$ national registers), using Fixed-Effects inverse-variance weighting collapses between-entity heterogeneity ($\tau^2$) and allows a single massive register to consume $>90\%$ of the weight. Always evaluate Cochran's $Q$, estimate between-entity variance $\tau^2$ (DerSimonian–Laird Random Effects), apply small-sample adjustments (Knapp–Hartung), and report both 95% Confidence Intervals (mean projection) and 95% Prediction Intervals (new entity outcome).
 * **Conflating descriptive and inferential statistics**:
   - *Descriptive statistics* must be computed directly from `/datasets` and reflect audited empirical observations.
   - *Inferential statistics* must be estimated in `/src/modeling.py`, reporting fitted parameters, standard errors, $R^2$, confidence intervals, or analytical bounds.
 * **Asserting equivalence or difference without uncertainty quantification**: Claiming two trajectories, slopes, or institutional efficiencies are "identical" or "significantly different" without standard errors, confidence intervals, or hypothesis tests.
 * **Conflating mediators with confounders**: Treating endogenous mechanisms on the causal pathway (e.g., capex collapse, institutional brain drain, funding allocation) as exogenous baseline confounders.
 
-### Bad Code & Visualization Practices:
+### Bad Code & Visualization Practices (Strict AST Contract):
 * **Uncommented, opaque code**: Writing scripts without docstrings, clear variable names, or mathematical explanations.
 * **Hardcoded guessed parameters**: Pasting invented distribution parameters ($\mu, \sigma, \lambda$, regression slopes) into scripts instead of fitting them to `/datasets`.
+* **Silent dictionary lookup fallbacks**: Never use `.get(key, <numeric_literal>)` for empirical or domain parameters. Silent fallbacks mask missing data keys and allow corrupted data pipelines to proceed undetected. Use direct index lookups `df.loc[key]` or `dict[key]` so missing records trigger an immediate, fail-fast exception (`KeyError`).
+* **Conditional ternary fallbacks & domain float defaults**: Never write `x if cond else <domain_float>` or declare domain floats in function signatures (e.g., `def fit_model(..., precarity_rr=2.54)`). All numerical parameters must be passed explicitly from audited datasets or literature catalogs.
+* **Hardcoded empirical numbers in equality assertions**: Never write `assert value == 111517` with magic literals. Assert against structural accounting identities (`assert total == part_a + part_b`) or dynamic benchmark references (`assert value == benchmarks.loc[...]`).
+* **Unreachable dead code**: Never leave dead code after `return` statements in data transformation or modeling modules.
 * **Generating synthetic random data for empirical claims**: Never use `scipy.stats.norm.rvs(size=...)` or `np.random.normal(...)` to fabricate artificial observations and plot them as empirical distributions. Always plot empirical cohorts/series or fit parametric/non-parametric models (`scipy.optimize.curve_fit`, `scipy.stats.linregress`, KDE) to real data.
 * **Missing pipeline assertions**: Omitting automated checks in `src/data_preparation.py` (e.g., verifying that sub-budgets sum to total budget, physical output / population = per-capita output, or index base year $= 100.0$).
+* **Guessing or interpolating unobservable cells**: When administrative registers have non-overlapping reporting brackets that leave a cell denominator unobservable, preserve `NaN` (`None`) explicitly rather than fabricating an interpolated estimate.
 * **Decoupled or ad-hoc plotting**: Hardcoding numbers inside standalone plotting scripts instead of having `src/modeling.py` ingest `/datasets`, fit models, and render all figures.
 * **Missing plot validity documentation**: Rendering plots without updating `plots/plot.md` with provenance, equations, and limitations for every panel.
 
@@ -106,10 +113,12 @@ $$\text{goal} \longrightarrow \text{literature} \longrightarrow \text{rawdata} \
 ### Pillar 1: Scope Alignment & Numerator-Denominator Consistency
 1. **Exact Boundary Matching**:
    * Every rate, per-capita indicator, or per-student ratio $\text{Rate} = \frac{\text{Numerator}}{\text{Denominator}}$ requires that the numerator and denominator share the exact same institutional, geographic, and temporal boundary.
-2. **Institutional AccountingHarmonization (e.g., University Comparisons: TUM vs. MIT vs. ETH)**:
+2. **Explicit NaN Preservation for Incompatible Brackets**:
+   * When cross-referencing administrative registers where sub-category brackets do not align (e.g., numerator reported for ages 21–25, but reference denominator available only for 20–25 or 21–60), **retain `NaN` explicitly** in analysis tables rather than inventing an interpolated value. In parametric curve fitting, anchor model knots to observed midpoints to prevent artificial overshoot between discrete cohorts.
+3. **Institutional Accounting Harmonization (e.g., University Comparisons: TUM vs. MIT vs. ETH)**:
    * **Consolidated vs. Core Academic Budgets**: University financial statements differ vastly in scope. TUM’s consolidated figures often interface with the *Klinikum rechts der Isar* (medical center with massive clinical patient revenue/costs); MIT’s gross operating revenues include the federally funded *MIT Lincoln Laboratory* ($>\$1.2\text{B}$) and auxiliary dining/housing enterprises; ETH Domain figures distinguish between ETH Zurich proper and sister research institutes (PSI, Empa, Eawag, WSL).
    * **Student-Facing Budget Isolation**: To measure *student-facing budget per student*, researchers must strip non-academic clinical hospitals, external defense/national labs, and pure industrial contract pass-throughs, isolating **Instructional & Student-Facing Academic Expenditure** (core teaching budget + instructional share of central infrastructure and academic support) divided by **Full-Time Equivalent (FTE) enrolled students** (separating bachelor/master teaching loads from external doctoral employees).
-3. **Longitudinal Denominator Integrity (e.g., Multi-Decade Per-Capita Output in Venezuela)**:
+4. **Longitudinal Denominator Integrity (e.g., Multi-Decade Per-Capita Output in Venezuela)**:
    * When computing per-capita production over 50 years ($\text{Output}_{c,t} / \text{Population}_t$), the population denominator must account for demographic regime shocks (such as the post-2014 emigration of $>7\text{ million}$ Venezuelans documented in UN WPP and ENCOVI revisions). Using unadjusted linear population projections overstates the denominator and distorts per-capita trajectories.
 
 ### Pillar 2: Empirical Distributions & Trajectories vs. Synthetic Fallacies
@@ -123,50 +132,63 @@ $$\text{goal} \longrightarrow \text{literature} \longrightarrow \text{rawdata} \
 1. **Direct Compositional Standardization**:
    * When comparing entities with different internal compositions (e.g., universities with different STEM vs. humanities shares, or economies with shifting sectoral mixes), compute stratum-specific metrics $R_k^{(g)}$ and apply a common reference weight $w_k$:
      $$R_{\text{std}}^{(g)} = \sum_{k \in K} w_k \cdot R_k^{(g)}, \quad w_k = \frac{N_k^{(\text{ref})}}{\sum_{j} N_j^{(\text{ref})}}$$
-2. **Currency, Inflation, and PPP Normalization**:
+2. **Epidemiological Compositional Confounding Factor ($\text{CF}$, Rothman 2008)**:
+   * When standardizing a group disparity for a mediator/confounder with differential prevalence ($p_1$ vs. $p_0$) and relative risk $RR$, compute the exact population confounding factor:
+     $$\text{CF} = \frac{1 + p_1 (RR - 1)}{1 + p_0 (RR - 1)}$$
+   * **Symmetric Zero-Exposure Theorem**: Standardizing Group 1 to Group 0's baseline exposure level ($p_1 \to p_0$) produces identically the same relative disparity ratio as hypothetically setting exposure to zero ($p \to 0\%$) in both groups. Always standardize against the empirical reference baseline to preserve real-world administrative grounding.
+3. **Currency, Inflation, and PPP Normalization**:
    * Cross-national monetary metrics (e.g., EUR in Munich, USD in Cambridge MA, CHF in Zurich) must be converted using **OECD / World Bank Purchasing Power Parity (PPP)** and adjusted for local academic cost structures (salary scales, living costs), always reporting both nominal exchange-rate equivalents and PPP-adjusted real values.
    * Multi-decade monetary series must be deflated to constant real base-year prices (or evaluated in physical units: barrels/day, metric tons, GWh per capita).
-3. **Multi-Series Base-Year Indexing**:
+4. **Multi-Series Base-Year Indexing**:
    * When comparing heterogeneous physical commodities (e.g., crude oil in bbl/day, steel/aluminum in tons/capita, electricity in kWh/capita, cereals in kg/capita), normalize trajectories to a shared baseline index ($\text{Index}_{t_0} = 100$ at peak or initial year $t_0$) in comparative panels while preserving exact physical units in dedicated panels and tables.
 
-### Pillar 4: Joint Distributions, Conditional Chain Rule & Bounds
+### Pillar 4: Joint Distributions, Conditional Chain Rule, Fréchet Bounds & Copula Sensitivity
 1. **Avoid the Independence Fallacy**:
    * When evaluating multi-factor intersections (e.g., probability that a student is in a small-cohort seminar $\cap$ taught by tenured faculty $\cap$ high-equipment lab, or a commodity sector experiencing simultaneous capex starvation $\cap$ skilled-labor exodus $\cap$ price controls), never multiply unconditional marginals without checking correlation.
-2. **Conditional Chain Rule & Fréchet Bounds**:
-   * Express joint concentrations via empirical conditional probabilities $P(A \cap B \cap C) = P(A) \cdot P(B \mid A) \cdot P(C \mid A, B)$ and compute **Fréchet–Hoeffding bounds** $[P_{\min}, P_{\max}]$ when exact joint cross-tabulations are partially unobserved.
+2. **Conditional Chain Rule, Illustrative Baseline ($M_{\text{ind}}$) & Bounds**:
+   * Express joint concentrations via empirical conditional probabilities:
+     $$P(A \cap B \cap C) = P(A) \cdot P(B \mid A) \cdot P(C \mid A, B)$$
+   * If individual microdata cross-tabulations are unobserved, label the estimate explicitly as an **illustrative baseline model under conditional independence ($M_{\text{ind}}$)** and provide:
+     - **Analytical Fréchet–Hoeffding bounds** $[P_{\min}, P_{\max}]$ spanning all possible dependency structures:
+       $$P_{\min} = P(A) \cdot \max(0, P(B \mid A) + P(C \mid A) - 1), \quad P_{\max} = P(A) \cdot \min(P(B \mid A), P(C \mid A))$$
+     - **Parametric Copula Sensitivity** (e.g., Plackett copula varying odds ratio $\text{OR} \in [0.8, 1.5]$) to confirm point estimate stability.
 
-### Pillar 5: Causal Inference — Confounders, Mediators & Structural Breaks
+### Pillar 5: Causal Inference — Confounders, Mediators, Shapley Waterfalls & TOST Equivalence
 1. **Exogenous Confounders ($Z$) vs. Endogenous Mediators ($M$)**:
-   * **Confounders ($Z$)**: Exogenous factors affecting both baseline structure and outcomes (e.g., global commodity price super-cycles, geological basin maturity, national statutory tuition frameworks, disciplinary mandate). Must be controlled for to isolate institutional or policy effects.
-   * **Mediators ($M$)**: Mechanisms lying *on* the causal pathway between policy/institutional governance ($X$) and outcome ($Y$):
-     $$X \text{ (Policy / Governance / Endowment)} \longrightarrow M \text{ (Capex, Brain Drain, Faculty-Student Ratio)} \longrightarrow Y \text{ (Per-Capita Output / Research & Teaching Quality)}$$
-   * Controlling for $M$ in a sequential waterfall decomposition quantifies **how much of the total effect is explained by each mechanism** (e.g., how much of Venezuela's per-capita output collapse is attributable to PDVSA/SIDOR expropriation & capex cessation vs. skilled personnel flight vs. macroeconomic hyperinflation/import compression; or how much of a research impact gap is driven by endowment per faculty vs. teaching load vs. postdoc/PhD ratio).
+   * **Confounders ($Z$)**: Exogenous factors affecting both baseline structure and outcomes (e.g., age cohorts, sex, global commodity price super-cycles). Must be controlled for to isolate institutional or policy effects.
+   * **Mediators ($M$)**: Mechanisms lying *on* the causal pathway between policy/governance ($X$) and outcome ($Y$):
+     $$X \text{ (Policy / Governance / Status)} \longrightarrow M \text{ (Capex, Poverty, Brain Drain, Housing)} \longrightarrow Y \text{ (Output / Delinquency)}$$
+   * Controlling for $M$ isolates the **Controlled Direct Effect (CDE)**. It identifies the mechanism explaining the difference, not that the total difference is non-existent.
+2. **Path-Independent Shapley Value Decomposition for Waterfalls**:
+   * Sequential waterfall charts are inherently path-dependent (ordering determines the apparent size of each bar's drop).
+   * For $K$ sequential adjustment stages, evaluate all $K!$ order permutations and report **Shapley values** ($\phi_j = \frac{1}{K!} \sum_{\pi} \Delta_j(\pi)$) alongside the primary pedagogical sequence.
+3. **Equivalence Testing via Two One-Sided Tests (TOST)**:
+   * When testing whether an adjusted gap is negligible, replace the null-hypothesis fallacy with **TOST equivalence tests**:
+     $$z_1 = \frac{\ln(\text{Ratio}) - (-\Delta)}{\text{SE}_{\ln}}, \quad z_2 = \frac{\Delta - \ln(\text{Ratio})}{\text{SE}_{\ln}}, \quad p_{\text{TOST}} = \max(1 - \Phi(z_1), 1 - \Phi(z_2))$$
+     testing against explicit tolerance margins (e.g., $\pm 30\%$ or $\pm 50\%$).
 
-### Pillar 6: Multi-Source Triangulation & Proxy Validity
-1. **Triangulating Censored or Degraded Official Data**:
-   * When primary domestic reporting suffers from blackouts or political distortion (e.g., Venezuelan central bank/ministry reporting gaps post-2015), cross-validate and splice series using independent international registries (OPEC Secondary Sources, U.S. EIA, USGS Mineral Yearbooks, World Steel Association, FAOSTAT, UN Comtrade, ENCOVI). Document exact splicing years and concordance checks.
-2. **Multi-Dimensional Construct Validity (Avoiding Goodhart's Law)**:
-   * Never reduce complex constructs like "Research Quality" or "Teaching Quality" to a single noisy proxy. Measure **Research Quality** across orthogonal empirical dimensions:
-     1. *Field-Weighted Citation Impact (FWCI)* / Top-1% & Top-10% highly cited publication share (CWTS Leiden / Scopus / OpenAlex).
-     2. *Competitive Peer-Reviewed Grant Capture per Faculty* (ERC grants, NSF/NIH/DFG awards).
-     3. *High-Impact Breakthroughs & Technology Transfer* (Nature/Science index, triadic patents, spin-offs per 1,000 researchers).
+### Pillar 6: Multi-Source Triangulation, Meta-Regression & Construct Validity
+1. **Cross-Entity & Cross-National Meta-Regression (DerSimonian–Laird REMR)**:
+   * When synthesizing empirical effect ratios from multiple external studies across jurisdictions, estimate between-study heterogeneity $\tau^2$, Cochran's $Q$, and Higgins' $I^2$.
+   * Use **Random-Effects Meta-Regression (REMR)** with **Knapp–Hartung small-sample standard errors** to prevent single large registries from dominating weights.
+   * Compute **Leave-One-Out (LOO) Jackknife sensitivity** across all entities, and report both **95% Confidence Intervals** (mean prediction) and **95% Prediction Intervals** ($\sqrt{\text{Var}(\hat{y}) + \tau^2}$) for new entity projections.
+2. **Macro-Observational Gradients vs. Discordant Sibling Fixed-Effects**:
+   * Distinguish between **macro-observational population risk gradients** (which reflect clustered structural disadvantage like neighborhood segregation and schooling quality) and **within-family discordant sibling models** (which isolate individual-level unconfounded levers). Do not misinterpret macro indicators as mechanical cash levers.
+3. **Multi-Dimensional Construct Validity (Avoiding Goodhart's Law)**:
+   * Never reduce complex constructs to a single noisy proxy. Triangulate across orthogonal empirical dimensions (e.g., citations, competitive grants, technology transfer).
 
 ### Pillar 7: Synoptic $3 \times 3$ Matrix Architecture (`src/modeling.py` & `plots/plot.md`)
 1. **Unified 9-Panel Visual Synthesis**:
-   * Complex multi-dimensional research questions should be synthesized into a cohesive **9-Panel ($3 \times 3$) Synoptic Matrix** (`figsize=(18, 15)`, `dpi=300`), accompanied by standalone high-resolution exports of each panel (`panel_a_*.png` through `panel_i_*.png`) and a macro waterfall chart.
-2. **Standardized 3-Row Pedagogical Flow**:
+   * Synthesize multi-dimensional investigations into a cohesive **9-Panel ($3 \times 3$) Synoptic Matrix** (`figsize=(18, 15)`, `dpi=300`) alongside standalone panel exports (`panel_a_*.png` through `panel_i_*.png`) and macro waterfall charts.
+2. **Exact Marginal Conservation on 2D Surfaces**:
+   * Any 2D interaction surface $R(X_1, X_2)$ must conserve the empirical marginal distribution identically across slices:
+     $$\mathbb{E}_{X_2}[R(x_1, X_2)] \equiv Y_{\text{empirical}}(x_1) \quad (\text{runtime assert drift } < 10^{-10})$$
+3. **Strict Scope-Restricted Extrapolation**:
+   * Never extrapolate counterfactual sensitivity bands or standardized curves across the entire life course or time horizon if empirical evidence only covers a sub-window (e.g., restrict youth precarity controls strictly to ages 14–30).
+4. **Standardized 3-Row Pedagogical Flow**:
    * **Row 1 (Panels A–C): Empirical Baselines, Denominator Normalization & Structural Distributions**
-     - *Panel A*: Headline Crude vs. Normalized Comparison (e.g., Total vs. Per-Capita / Per-Student PPP Baseline).
-     - *Panel B*: Primary Structural / Temporal / Cohort Distribution (e.g., 50-year multi-commodity index trajectories or student/faculty cohort structure).
-     - *Panel C*: Resource / Input / Sectoral Distribution (e.g., budget composition across teaching, base funding, and third-party grants; or real capital investment / export revenue deciles).
-   * **Row 2 (Panels D–F): Sub-Component Breakdown, Joint Conditioning & Bivariate Surface**
-     - *Panel D*: Modality / Sub-Sector / Accounting Tier Breakdown (stacked or grouped decomposition of numerators and denominators).
-     - *Panel E*: Multi-Factor Joint Concentration or Efficiency Ratio with uncertainty/Fréchet bounds.
-     - *Panel F*: 2D Bivariate Interaction Surface ($X_1 \times X_2 \to Y$ contour map calibrated to preserve empirical marginals, e.g., Student-Faculty Ratio $\times$ Instructional Budget per Student $\to$ Learning/Research Output, or Capital Investment $\times$ Institutional Governance $\to$ Per-Capita Commodity Yield).
-   * **Row 3 (Panels G–I): Dynamic Curves, Econometric Regressions & Sequential Waterfall Decomposition**
-     - *Panel G*: Fitted Structural Curve / Longitudinal Decay or Scale Trajectory (`scipy.optimize.curve_fit` over empirical observations with highlighted regime windows).
-     - *Panel H*: Econometric Regression Gradient with Empirical Error Bars (`scipy.stats.linregress` / OLS across deciles, time periods, or departments).
-     - *Panel I*: Sequential Waterfall Decomposition or Controlled Multivariate Benchmark (quantifying the stepwise contribution of accounting boundaries, confounders, and mediators from raw gap to residual).
+   * **Row 2 (Panels D–F): Sub-Component Breakdown, Joint Conditioning & Bivariate Surface / Meta-Regression**
+   * **Row 3 (Panels G–I): Dynamic Trajectories, Econometric Regressions, Shapley Waterfall & Demographic Standardizations**
 
 ---
 
@@ -280,9 +302,13 @@ Before finalizing any empirical analysis or publication, verify every item:
 - [ ] **Deterministic ETL**: Does `python src/data_preparation.py` run cleanly from scratch and pass all `assert` checks (unit conversions, accounting sums, per-capita divisions)?
 - [ ] **Benchmark Audit**: Are all isolated empirical figures from PDFs/websites logged in `literature_empirical_benchmarks.csv` with exact pages, tables, and verbatim quotes?
 - [ ] **Boundary & Denominator Alignment**: Are numerators and denominators matched in scope (e.g., stripping non-student hospital/defense lab pass-throughs; using migration-adjusted population denominators)?
+- [ ] **Explicit NaN Preservation**: Are unobservable sub-category denominators retained as `NaN` rather than interpolated or guessed?
 - [ ] **Normalization Rigor**: Are monetary figures adjusted for inflation and PPP? Are physical commodities properly normalized per capita and indexed to a transparent base year?
-- [ ] **Zero Synthetic Data**: Are all plotted distributions and trajectories derived from empirical data in `/datasets` without any guessed Gaussian/synthetic random generation (`rvs`)?
+- [ ] **Strict AST Code Invariants**: Does code pass static AST analysis (zero `.rvs`/`np.random`, zero silent `.get(k, <number>)` fallbacks, zero ternary/default domain floats, zero magic `assert ==` literals)?
 - [ ] **Causal & Structural Clarity**: Are exogenous confounders, accounting boundary adjustments, structural breaks, and endogenous mediators clearly distinguished?
+- [ ] **Path-Independent Shapley Values**: Are waterfall adjustments evaluated across all $K!$ order permutations and reported with Shapley values?
+- [ ] **TOST Equivalence Tested**: If claiming that groups/outcomes are equivalent under controls, has formal TOST equivalence testing been conducted against explicit bounds ($\pm \Delta$)?
+- [ ] **2D Marginal Conservation & Scope Clipping**: Does the 2D interaction surface conserve empirical marginals identically across slices ($< 10^{-10}$ drift), and are counterfactual curves strictly clipped to empirical study windows?
 - [ ] **Unified Model & Plot Generation**: Does `src/modeling.py` fit all statistical models to `/datasets` and deterministically render Panels A–I, the waterfall chart, and the $3 \times 3$ synoptic matrix?
 - [ ] **Plot Validity Documentation (`plot.md`)**: Does `plots/plot.md` document every single generated figure with its exact data sources, mathematical equations, parameter estimates, and methodological caveats?
 - [ ] **Automated Pipeline Audit**: Has `python .agents/skills/responsible-research/scripts/audit_research_pipeline.py` been executed and passed all checks?
